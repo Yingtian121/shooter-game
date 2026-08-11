@@ -1,0 +1,1895 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>咻咻小神枪手</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","微软雅黑",sans-serif;
+  background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;-webkit-user-select:none;
+}
+.hidden{display:none!important}
+
+/* Canvas */
+#gameCanvas{position:fixed;inset:0;z-index:5;display:none}
+#gameCanvas.active{display:block}
+
+/* Stars */
+#stars{position:fixed;inset:0;pointer-events:none;z-index:0}
+.star{position:absolute;background:#fff;border-radius:50%;animation:twinkle var(--d,.8s) ease-in-out infinite;opacity:0}
+@keyframes twinkle{0%,100%{opacity:.2}50%{opacity:.9}}
+
+/* ===== PLAYER SELECT SCREEN ===== */
+#playerScreen{
+  position:fixed;inset:0;z-index:20;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:env(safe-area-inset-top,20px) 20px env(safe-area-inset-bottom,20px);
+  background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);
+}
+.player-title{font-size:32px;font-weight:900;color:#ffb347;text-shadow:0 0 20px rgba(255,179,71,.4);margin-bottom:8px}
+.player-subtitle{font-size:15px;color:#8e8ea0;margin-bottom:32px}
+.player-cards{display:flex;gap:24px;justify-content:center;flex-wrap:wrap}
+.player-card{
+  background:rgba(255,255,255,.08);border:3px solid transparent;border-radius:24px;
+  padding:20px 16px;width:160px;text-align:center;cursor:pointer;
+  transition:all .3s ease;display:flex;flex-direction:column;align-items:center;gap:10px;
+}
+.player-card:active{transform:scale(.95)}
+.player-card.selected{border-color:#ffb347;background:rgba(255,179,71,.12);box-shadow:0 0 30px rgba(255,179,71,.25)}
+.player-card img{width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,.2);transition:.3s}
+.player-card.selected img{border-color:#ffb347;transform:scale(1.08)}
+.player-card .p-name{font-size:20px;font-weight:800;color:#fff}
+.player-card .p-age{font-size:13px;color:#8e8ea0}
+.player-card .p-tag{font-size:12px;color:#4ecdc4;background:rgba(78,205,196,.15);padding:3px 10px;border-radius:12px;margin-top:4px}
+
+/* ===== RITUAL SCREEN (encouragement) ===== */
+#ritualScreen{
+  position:fixed;inset:0;z-index:21;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:env(safe-area-inset-top,20px) 30px env(safe-area-inset-bottom,20px);
+  background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);
+  gap:20px
+}
+.ritual-avatar{
+  width:120px;height:120px;border-radius:50%;object-fit:cover;
+  border:4px solid #ffb347;box-shadow:0 0 40px rgba(255,179,71,.35);
+  animation:ritualPulse 2s ease-in-out infinite
+}
+@keyframes ritualPulse{0%,100%{transform:scale(1);box-shadow:0 0 40px rgba(255,179,71,.35)}50%{transform:scale(1.06);box-shadow:0 0 60px rgba(255,179,71,.55)}}
+.ritual-name{font-size:36px;font-weight:900;color:#ffb347;text-shadow:0 0 25px rgba(255,179,71,.5)}
+.ritual-words{
+  font-size:20px;font-weight:700;color:#fff;text-align:center;line-height:1.6;
+  background:rgba(255,255,255,.06);border-radius:20px;padding:20px 24px;
+  border:1px solid rgba(255,179,71,.2);max-width:320px;
+  animation:ritualFadeIn .8s ease-out
+}
+@keyframes ritualFadeIn{0%{opacity:0;transform:translateY(20px)}100%{opacity:1;transform:translateY(0)}}
+.ritual-btn{
+  background:linear-gradient(135deg,#ffb347,#ff8c00);color:#1a1a2e;border:none;
+  padding:14px 40px;border-radius:30px;font-size:19px;font-weight:800;
+  cursor:pointer;min-height:50px;box-shadow:0 6px 25px rgba(255,179,71,.3);
+  animation:ritualFadeIn 1s ease-out;transition:transform .2s
+}
+.ritual-btn:active{transform:scale(.93)}
+.ritual-stars{display:flex;gap:6px}
+.ritual-stars span{font-size:24px;animation:ritualStarBounce .6s ease-in-out infinite}
+.ritual-stars span:nth-child(1){animation-delay:0s}
+.ritual-stars span:nth-child(2){animation-delay:.15s}
+.ritual-stars span:nth-child(3){animation-delay:.3s}
+@keyframes ritualStarBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+
+/* ===== START SCREEN ===== */
+#startScreen{
+  position:fixed;inset:0;z-index:10;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:env(safe-area-inset-top,20px) 20px env(safe-area-inset-bottom,20px);
+  gap:12px
+}
+.start-title{font-size:42px;font-weight:900;color:#ffb347;text-shadow:0 0 30px rgba(255,179,71,.5)}
+.start-title .emoji{font-size:56px;display:block;animation:bounce 1s infinite}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px)}}
+.start-subtitle{font-size:16px;color:#8e8ea0;margin-bottom:16px}
+.mode-btns{display:flex;flex-direction:column;gap:12px;width:260px}
+.mode-btn{
+  background:#16213e;color:#fff;border:3px solid transparent;
+  padding:16px 20px;border-radius:18px;font-size:19px;font-weight:700;
+  min-height:52px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer
+}
+.mode-btn:active{transform:scale(.95)}
+.mode-btn.c1{border-color:#ff6b9d}.mode-btn.c1:active{background:#ff6b9d}
+.mode-btn.c2{border-color:#4ecdc4}.mode-btn.c2:active{background:#4ecdc4}
+.mode-btn.c3{border-color:#a8e06e}.mode-btn.c3:active{background:#a8e06e}
+.mode-btn.c4{border-color:#b388ff}.mode-btn.c4:active{background:#b388ff}
+
+/* Start screen player bar */
+#startPlayerBar{
+  display:flex;align-items:center;gap:12px;margin-bottom:20px;
+  background:rgba(255,255,255,.08);padding:10px 18px;border-radius:30px;border:1px solid rgba(255,255,255,.1)
+}
+#startPlayerBar img{width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,179,71,.4)}
+#startPlayerBar .sp-info{display:flex;flex-direction:column;align-items:flex-start}
+#startPlayerBar .sp-name{font-size:16px;font-weight:700;color:#fff}
+#startPlayerBar .sp-age{font-size:12px;color:#8e8ea0}
+#switchPlayerBtn{
+  background:rgba(255,179,71,.2);color:#ffb347;border:none;
+  padding:6px 14px;border-radius:16px;font-size:12px;font-weight:700;cursor:pointer;margin-left:auto
+}
+#switchPlayerBtn:active{background:rgba(255,179,71,.35)}
+
+/* ===== GAME SCREEN ===== */
+#gameScreen{
+  position:fixed;inset:0;z-index:10;
+  display:flex;flex-direction:column;
+  padding:env(safe-area-inset-top,10px) 16px env(safe-area-inset-bottom,10px);
+  pointer-events:none
+}
+#gameHeader{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:8px 0;pointer-events:none
+}
+#backBtn{
+  background:rgba(255,255,255,.12);color:#fff;border:none;
+  width:44px;height:44px;border-radius:50%;font-size:20px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  pointer-events:auto
+}
+#promptArea{text-align:center;padding:4px 0;pointer-events:none}
+.prompt-label{color:#8e8ea0;font-size:13px}
+#promptTarget{
+  font-size:40px;font-weight:900;color:#ffb347;
+  text-shadow:0 0 20px rgba(255,179,71,.4);
+  animation:pulse 1.5s ease-in-out infinite
+}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+
+#energyArea{
+  display:flex;align-items:center;gap:8px;padding:8px 0;pointer-events:none
+}
+#energyArea span{color:#fff;font-size:13px}
+#energyBarBg{flex:1;height:14px;background:rgba(255,255,255,.1);border-radius:8px;overflow:hidden}
+#energyBarFill{
+  height:100%;border-radius:8px;
+  background:linear-gradient(90deg,#4ecdc4,#a8e06e,#ffb347);
+  transition:width .4s cubic-bezier(.4,0,.2,1)
+}
+#rainbowBullets{display:flex;gap:4px}
+.rdot{width:12px;height:12px;border-radius:50%;background:rgba(255,255,255,.2);transition:.3s}
+.rdot.on{background:linear-gradient(135deg,#ff6b9d,#ffb347,#4ecdc4,#b388ff);box-shadow:0 0 10px rgba(255,179,71,.5)}
+
+/* Toast & Celebration */
+.toast{
+  position:fixed;top:42%;left:50%;transform:translate(-50%,-50%);
+  z-index:60;pointer-events:none;opacity:0;
+  font-size:22px;font-weight:900;color:#fff;
+  text-shadow:0 0 20px rgba(255,179,71,.6);
+  transition:opacity .25s;text-align:center
+}
+.toast.show{opacity:1;animation:toastUp 2.6s ease-out forwards}
+@keyframes toastUp{0%{transform:translate(-50%,-50%) scale(.5);opacity:0}15%{transform:translate(-50%,-50%) scale(1.1);opacity:1}80%{transform:translate(-50%,-55%) scale(1);opacity:1}100%{transform:translate(-50%,-75%) scale(1);opacity:0}}
+.celebration-overlay{
+  position:fixed;inset:0;z-index:80;pointer-events:none;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;transition:opacity .3s
+}
+.celebration-overlay.on{opacity:1}
+.celebration-text{font-size:34px;font-weight:900;color:#ffb347;text-shadow:0 0 40px rgba(255,179,71,.8);text-align:center;line-height:1.4;animation:celeBounce .5s ease-out}
+@keyframes celeBounce{0%{transform:scale(0);opacity:0}60%{transform:scale(1.2)}100%{transform:scale(1);opacity:1}}
+
+/* Score Card - prominent, top center */
+#scoreCard{
+  display:flex;align-items:center;gap:10px;
+  background:linear-gradient(135deg,rgba(255,179,71,.2),rgba(255,107,157,.15));
+  border:2px solid rgba(255,179,71,.35);padding:8px 18px;border-radius:24px;
+  position:fixed;top:env(safe-area-inset-top,12px);left:50%;transform:translateX(-50%);z-index:11;
+  pointer-events:none;box-shadow:0 4px 20px rgba(255,179,71,.15)
+}
+#scoreCard img{width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.25)}
+#scoreCard .sc-name{font-size:13px;font-weight:700;color:#fff}
+#scoreCard .sc-score{font-size:22px;font-weight:900;color:#ffb347;text-shadow:0 0 10px rgba(255,179,71,.4)}
+#scoreCard .sc-divider{color:rgba(255,255,255,.3);font-size:14px;margin:0 4px}
+#scoreCard .sc-level{font-size:13px;color:#4ecdc4;font-weight:700}
+
+/* Mode label in game */
+#modeLabel{
+  font-size:12px;color:#8e8ea0;background:rgba(255,255,255,.08);
+  padding:3px 10px;border-radius:10px;display:inline-block;margin-bottom:2px
+}
+
+/* ===== STORE / POINTS MARKET ===== */
+#storeScreen{
+  position:fixed;inset:0;z-index:22;
+  display:flex;flex-direction:column;align-items:center;
+  padding:env(safe-area-inset-top,20px) 16px env(safe-area-inset-bottom,20px);
+  background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);
+  overflow-y:auto;
+}
+.store-header{
+  display:flex;align-items:center;gap:12px;width:100%;max-width:420px;margin-bottom:16px;padding-top:8px;
+}
+.store-back{
+  background:rgba(255,255,255,.12);color:#fff;border:none;width:44px;height:44px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.store-title{font-size:22px;font-weight:900;color:#ffb347;text-shadow:0 0 20px rgba(255,179,71,.4);flex:1;text-align:center}
+.store-points{display:flex;align-items:center;gap:6px;background:rgba(255,179,71,.15);border:1px solid rgba(255,179,71,.3);padding:6px 14px;border-radius:20px;flex-shrink:0}
+.store-points .star-icon{color:#ffb347;font-size:18px;font-weight:900}
+.store-points .pts-val{font-size:16px;font-weight:800;color:#ffb347}
+.store-subtitle{font-size:14px;color:#8e8ea0;margin-bottom:14px;text-align:center}
+.store-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;width:100%;max-width:420px;
+}
+.store-item{
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:14px 10px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;
+}
+.store-item .s-icon{font-size:36px}
+.store-item .s-name{font-size:15px;font-weight:700;color:#fff}
+.store-item .s-cost{font-size:14px;color:#ffb347;font-weight:700}
+.store-item .s-btn{
+  background:linear-gradient(135deg,#ffb347,#ff8c00);color:#1a1a2e;border:none;padding:8px 18px;border-radius:14px;font-size:14px;font-weight:800;cursor:pointer;min-width:80px;min-height:36px;
+}
+.store-item .s-btn:disabled{background:rgba(255,255,255,.15);color:rgba(255,255,255,.35);cursor:not-allowed}
+.store-item .s-btn:active:not(:disabled){transform:scale(.95)}
+.store-record-title{font-size:16px;font-weight:700;color:#fff;margin:16px 0 8px;width:100%;max-width:420px}
+.store-record-list{width:100%;max-width:420px;display:flex;flex-direction:column;gap:8px}
+.store-record-item{
+  display:flex;justify-content:space-between;align-items:center;
+  background:rgba(255,255,255,.06);border-radius:12px;padding:10px 14px;font-size:13px;color:#ccc;
+}
+.store-record-item .rec-name{color:#fff;font-weight:700}
+.store-record-item .rec-pts{color:#ff6b9d;font-weight:700}
+.store-record-item .rec-date{color:#8e8ea0;font-size:12px}
+
+/* ===== PARENT MODE ===== */
+#parentScreen{
+  position:fixed;inset:0;z-index:23;
+  display:flex;flex-direction:column;align-items:center;
+  padding:env(safe-area-inset-top,20px) 16px env(safe-area-inset-bottom,20px);
+  background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);
+  overflow-y:auto;
+}
+.pwd-box{
+  display:flex;gap:10px;justify-content:center;margin:20px 0;
+}
+.pwd-digit{
+  width:52px;height:60px;background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.2);border-radius:12px;color:#fff;font-size:28px;font-weight:900;text-align:center;line-height:60px;caret-color:#ffb347;
+}
+.pwd-digit:focus{outline:none;border-color:#ffb347;box-shadow:0 0 12px rgba(255,179,71,.3)}
+.pwd-btn{
+  background:linear-gradient(135deg,#ffb347,#ff8c00);color:#1a1a2e;border:none;padding:12px 36px;border-radius:24px;font-size:17px;font-weight:800;cursor:pointer;min-height:48px;
+}
+.pwd-btn:active{transform:scale(.95)}
+.pwd-error{font-size:14px;color:#ff6b9d;margin-top:8px;min-height:20px;text-align:center}
+.pwd-hint{font-size:13px;color:#8e8ea0;text-align:center;margin-top:8px}
+
+.parent-tabs{display:flex;gap:8px;margin:12px 0 16px;width:100%;max-width:420px}
+.parent-tab{flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px 8px;font-size:14px;font-weight:700;color:#ccc;cursor:pointer;text-align:center}
+.parent-tab.active{background:rgba(255,179,71,.15);border-color:rgba(255,179,71,.4);color:#ffb347}
+.parent-content{width:100%;max-width:420px;display:flex;flex-direction:column;gap:12px}
+
+.parent-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:14px 16px}
+.parent-card .pc-title{font-size:15px;font-weight:700;color:#fff;margin-bottom:10px}
+.parent-card .pc-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:13px;color:#ccc}
+.parent-card .pc-row:last-child{border-bottom:none}
+.parent-card .pc-val{color:#ffb347;font-weight:700}
+
+.weekly-chart{display:flex;align-items:flex-end;gap:6px;height:120px;padding:10px 0;justify-content:center}
+.wc-bar{flex:1;background:linear-gradient(180deg,#4ecdc4,#2ed573);border-radius:6px 6px 0 0;min-width:24px;max-width:48px;position:relative;transition:height .4s ease}
+.wc-bar .wc-label{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:11px;color:#8e8ea0;white-space:nowrap}
+.wc-bar .wc-pct{position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:12px;font-weight:700;color:#fff}
+
+/* ===== DAILY TEST SCREEN ===== */
+#testScreen{
+  position:fixed;inset:0;z-index:24;
+  display:flex;flex-direction:column;align-items:center;
+  padding:env(safe-area-inset-top,20px) 16px env(safe-area-inset-bottom,20px);
+  background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);
+  overflow-y:auto;
+}
+.test-q{font-size:18px;font-weight:700;color:#fff;text-align:center;margin:16px 0 12px;line-height:1.5;max-width:400px}
+.test-options{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;max-width:400px;width:100%}
+.test-opt{
+  background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.15);border-radius:14px;padding:14px 18px;font-size:22px;font-weight:800;color:#fff;cursor:pointer;min-width:80px;text-align:center;transition:all .2s;
+}
+.test-opt:active{transform:scale(.95)}
+.test-opt.correct{background:rgba(46,213,115,.25);border-color:#2ed573;color:#2ed573}
+.test-opt.wrong{background:rgba(255,71,87,.25);border-color:#ff4757;color:#ff4757}
+.test-progress{font-size:13px;color:#8e8ea0;margin-bottom:8px}
+.test-result{font-size:20px;font-weight:900;color:#ffb347;text-align:center;margin:20px 0}
+
+/* ===== MODE SELECT extra buttons ===== */
+#startExtraBtns{display:flex;gap:10px;justify-content:center;margin-top:10px;width:260px}
+.start-extra-btn{flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:10px;font-size:14px;font-weight:700;color:#ccc;cursor:pointer;text-align:center}
+.start-extra-btn:active{background:rgba(255,255,255,.15)}
+.start-extra-btn.primary{background:rgba(255,179,71,.15);border-color:rgba(255,179,71,.4);color:#ffb347}
+
+/* ===== DAILY SESSION INFO overlay ===== */
+#sessionInfo{
+  position:fixed;top:env(safe-area-inset-top,12px);right:12px;z-index:12;
+  background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:6px 12px;font-size:12px;color:#ccc;pointer-events:none;
+}
+#sessionInfo .si-dot{width:8px;height:8px;border-radius:50%;background:#4ecdc4;display:inline-block;margin-right:4px;animation:siPulse 1.5s infinite}
+@keyframes siPulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ===== RESTRICTED OVERLAY ===== */
+#restrictOverlay{
+  position:fixed;inset:0;z-index:90;display:none;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.7);backdrop-filter:blur(4px);
+}
+#restrictOverlay.on{display:flex}
+.restrict-box{background:rgba(30,20,60,.95);border:1px solid rgba(255,179,71,.3);border-radius:20px;padding:24px 28px;max-width:320px;text-align:center}
+.restrict-box .r-title{font-size:20px;font-weight:900;color:#ffb347;margin-bottom:8px}
+.restrict-box .r-text{font-size:14px;color:#ccc;line-height:1.6;margin-bottom:16px}
+.restrict-box .r-btn{background:linear-gradient(135deg,#ffb347,#ff8c00);color:#1a1a2e;border:none;padding:10px 28px;border-radius:18px;font-size:15px;font-weight:800;cursor:pointer}
+
+</style>
+</head>
+<body>
+
+<!-- Player Select Screen -->
+<div id="playerScreen">
+  <div class="player-title">🎮 谁要玩？</div>
+  <div class="player-subtitle">选好你的头像，开始冒险吧！</div>
+  <div class="player-cards">
+    <div class="player-card" id="cardHuahua" onclick="selectPlayer('huahua')">
+      <img src="data:image/jpeg;base64,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" alt="花花">
+      <div class="p-name">花花</div>
+      <div class="p-age">5岁 · 明年上小学</div>
+      <div class="p-tag">幼小衔接</div>
+    </div>
+    <div class="player-card" id="cardCaocao" onclick="selectPlayer('caocao')">
+      <img src="data:image/jpeg;base64,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" alt="曹操">
+      <div class="p-name">曹操</div>
+      <div class="p-age">3岁 · 9月上小班</div>
+      <div class="p-tag">启蒙入门</div>
+    </div>
+  </div>
+</div>
+
+<!-- Ritual Screen (encouragement) -->
+<div id="ritualScreen" class="hidden">
+  <div class="ritual-stars"><span>⭐</span><span>🌟</span><span>✨</span></div>
+  <img class="ritual-avatar" id="ritualAvatar" src="" alt="">
+  <div class="ritual-name" id="ritualName"></div>
+  <div class="ritual-words" id="ritualWords"></div>
+  <button class="ritual-btn" id="ritualBtn" onclick="enterGame()">🎯 开始冒险！</button>
+</div>
+
+<div id="stars"></div>
+<canvas id="gameCanvas"></canvas>
+<div class="toast" id="toast"></div>
+<div class="celebration-overlay" id="celebration"><div class="celebration-text" id="celebText"></div></div>
+
+<!-- Start Screen -->
+<div id="startScreen" class="hidden">
+  <div id="startPlayerBar" style="display:none">
+    <img id="spAvatar" src="">
+    <div class="sp-info"><div class="sp-name" id="spName"></div><div class="sp-age" id="spAge"></div></div>
+    <button id="switchPlayerBtn" onclick="showPlayerSelect()">切换</button>
+  </div>
+  <div class="start-title"><span class="emoji">🎯</span>咻咻小神枪手</div>
+  <div class="start-subtitle">瞄准目标，点击射击！</div>
+  <div class="mode-btns">
+    <button class="mode-btn c1" onclick="start('chinese')">📖 汉字射击</button>
+    <button class="mode-btn c2" onclick="start('number')">🔢 数字射击</button>
+    <button class="mode-btn c3" onclick="start('letter')">🔤 字母射击</button>
+    <button class="mode-btn c4" onclick="start('word')">🌍 单词射击</button>
+  </div>
+  <div id="startExtraBtns">
+    <button class="start-extra-btn primary" onclick="showStore()">⭐ 积分超市</button>
+    <button class="start-extra-btn" onclick="showParent()">👨‍👩‍👧 家长模式</button>
+  </div>
+</div>
+
+<!-- Game Screen -->
+<div id="gameScreen" class="hidden">
+  <div id="scoreCard" style="display:none">
+    <img id="scAvatar" src="">
+    <div class="sc-name" id="scName"></div>
+    <div class="sc-divider">|</div>
+    <div class="sc-score">⭐ <span id="scScoreNum">0</span></div>
+    <div class="sc-divider">|</div>
+    <div class="sc-level" id="scLevel">第1关</div>
+  </div>
+  <div id="gameHeader">
+    <button id="backBtn" onclick="goHome()">←</button>
+    <div id="levelBadge">第1关</div>
+  </div>
+  <div id="promptArea">
+    <div id="modeLabel"></div>
+    <div class="prompt-label">🔫 瞄准这个目标：</div>
+    <div id="promptTarget">大</div>
+  </div>
+  <div id="energyArea">
+    <span>⚡能量</span>
+    <div id="energyBarBg"><div id="energyBarFill" style="width:0%"></div></div>
+    <div id="rainbowBullets"><div class="rdot"></div><div class="rdot"></div><div class="rdot"></div></div>
+  </div>
+</div>
+
+<script>
+// ==================== AUDIO ====================
+const AC=window.AudioContext||window.webkitAudioContext;let actx=null;
+function aInit(){if(!actx){actx=new AC();if(actx.state==='suspended')actx.resume();}}
+function tone(f,d,t,v){if(!actx)return;if(actx.state==='suspended')actx.resume();const o=actx.createOscillator(),g=actx.createGain();o.type=t||'sine';o.frequency.setValueAtTime(f,actx.currentTime);g.gain.setValueAtTime(v||.15,actx.currentTime);g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+d);o.connect(g);g.connect(actx.destination);o.start(actx.currentTime);o.stop(actx.currentTime+d);}
+function sHit(){tone(120,.08,'triangle',.18);setTimeout(()=>tone(880,.1,'sine',.2),30);setTimeout(()=>tone(1100,.08,'sine',.14),90);setTimeout(()=>tone(1320,.1,'sine',.1),150);}
+function sMiss(){tone(520,.06,'triangle',.08);setTimeout(()=>tone(392,.1,'triangle',.06),60);}
+function sBlank(){tone(1000,.03,'sine',.03);}
+function sCeleb(){[523,659,784,1047].forEach((n,i)=>setTimeout(()=>tone(n,.15,'sine',.16),i*100));setTimeout(()=>{[784,880,1047,1319].forEach((n,i)=>setTimeout(()=>tone(n,.2,'sine',.18),i*90));},450);}
+// iOS: AudioContext must be resumed inside a user gesture.
+// Unlock on ANY first touch/click so effects always play.
+function unlockAudio(){
+  aInit();
+  // Warm speechSynthesis inside the FIRST user gesture (iOS requires the first
+  // speak() to happen inside a gesture). Use a REAL short text at near-zero
+  // volume — speaking an EMPTY utterance can permanently hang Chrome's engine
+  // (onend never fires, speaking/pending stay true forever, and every later
+  // speak() call gets silently eaten — the classic "no voice at all" bug).
+  if(window.speechSynthesis&&!window._spWarmed){
+    window._spWarmed=true;
+    _spPush('嗒','zh-CN',null,1,1,0.01);
+  }
+  document.removeEventListener('touchstart',unlockAudio);
+  document.removeEventListener('click',unlockAudio);
+}
+document.addEventListener('touchstart',unlockAudio,{passive:true});
+document.addEventListener('click',unlockAudio);
+
+// ==================== SPEECH (self-managed queue, immune to engine hangs) ====================
+// We NEVER trust speechSynthesis.speaking/pending — Chrome bug: they can stay
+// true forever and silently swallow every subsequent speak(). The queue is
+// advanced by OUR OWN callbacks plus a watchdog that force-advances on hang.
+let bestVoice=null;let enVoice=null;
+function initVoices(){
+  if(!window.speechSynthesis)return;
+  const voices=speechSynthesis.getVoices();
+  // Priority: Chinese female voice > Chinese voice > default
+  const zhFemale=voices.find(v=>v.lang.startsWith('zh')&&v.name.includes('Female'));
+  const zhTing=voices.find(v=>v.lang.startsWith('zh')&&v.name.includes('Ting-Ting'));
+  const zhMei=voices.find(v=>v.lang.startsWith('zh')&&v.name.includes('Mei-Jia'));
+  const zhAny=voices.find(v=>v.lang.startsWith('zh'));
+  bestVoice=zhFemale||zhTing||zhMei||zhAny||null;
+  const enUS=voices.find(v=>v.lang==='en-US'&&v.name.includes('Female'));
+  const enAny=voices.find(v=>v.lang.startsWith('en'));
+  enVoice=enUS||enAny||null;
+}
+if(window.speechSynthesis){
+  speechSynthesis.onvoiceschanged=initVoices;
+  initVoices();
+}
+const _sq=[];let _sp=false;let _spWdt=null;
+function _spNext(){
+  if(_sp||_sq.length===0)return;
+  const item=_sq.shift();_sp=true;
+  const u=new SpeechSynthesisUtterance(item.t);
+  u.lang=item.lang;
+  if(item.voice)u.voice=item.voice;
+  u.rate=item.rate;u.pitch=item.pitch;u.volume=item.vol;
+  let done=false;
+  const fin=()=>{
+    if(done)return;done=true;_sp=false;
+    if(_spWdt){clearTimeout(_spWdt);_spWdt=null;}
+    if(_sq.length)setTimeout(_spNext,60);
+  };
+  u.onend=fin;u.onerror=fin;
+  // Watchdog: if the engine hangs (speak() never fires onend/onerror — known
+  // Chrome/Android bug), force-cancel and advance. The queue must never block
+  // forever on one sentence. Estimate is generous (~300ms/char + 2s slack).
+  const est=item.t.length*300+2000;
+  _spWdt=setTimeout(()=>{try{speechSynthesis.cancel();}catch(e){}fin();},est);
+  try{speechSynthesis.speak(u);}catch(e){fin();}
+}
+function _spPush(t,lang,voice,rate,pitch,vol){
+  if(!window.speechSynthesis||!t)return;
+  _sq.push({t:t,lang:lang,voice:voice,rate:rate,pitch:pitch,vol:vol});
+  _spNext();
+}
+function speak(t){_spPush(t,'zh-CN',bestVoice,0.85,1.05,0.9);}
+function speakWord(t){_spPush(t,'en-US',enVoice,0.78,1.0,0.9);}
+
+// ==================== STARS ====================
+(function(){
+  const c=document.getElementById('stars');
+  for(let i=0;i<50;i++){
+    const s=document.createElement('div');s.className='star';
+    s.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*100}%;width:${1+Math.random()*2}px;height:${1+Math.random()*2}px;--d:${2+Math.random()*3}s;animation-delay:${Math.random()*3}s`;
+    c.appendChild(s);
+  }
+})();
+
+// ==================== ENCOURAGEMENT MESSAGES ====================
+// Random encouragement for ritual screen (must vary each time)
+const RITUAL_MSGS_huahua=[
+  '花花小勇士，准备好了吗？🦸‍♀️\n今天的每一个气球里\n都藏着一个新知识哦~',
+  '花花真棒！💪\n5岁就是小小探索家啦～\n瞄准气球，出发吧！',
+  '花花来吧！🌟\n每一个击中都是进步，\n明年你就是小学生啦！',
+  '花花加油！🎯\n知识就像气球一样，\n你越瞄准它就越闪亮！',
+  '花花宝贝～🎈\n今天的冒险等着你，\n看看你能打到多少气球！',
+  '花花好厉害！⭐\n记住：每一次尝试\n都是在变强大哦~',
+  '花花小神枪手！🔫\n你眼力那么好，\n一定能找到正确的目标！',
+  '花花来了！🚀\n像火箭一样冲吧，\n知识的世界等着你探索！',
+  '花花，准备好了吗？🌈\n今天的气球有惊喜，\n看看你能收获多少星星！',
+  '花花小朋友！🎉\n相信自己，你可以的！\n出发去打气球咯~'
+];
+const RITUAL_MSGS_caocao=[
+  '曹操小朋友，你好呀！👋\n今天我们一起玩气球，\n找到正确的那个biu一下！',
+  '曹操来啦！🦁\n3岁的小勇士，\n看看你能找到几个气球？',
+  '曹操真可爱！🎈\n气球在天空飘啊飘，\n找到目标轻轻点一下~',
+  '曹操宝贝～🌟\n每个气球都不一样，\n试试看哪个是对的吧！',
+  '曹操加油呀！💫\n慢慢来，不着急，\n你是最棒的小探险家！',
+  '曹操小朋友！🎵\n来一起玩识字游戏，\n比一比谁眼力好！',
+  '曹操，来玩吧！🎠\n气球里有好多字宝宝，\n我们一个一个认识它们~',
+  '曹操小可爱！🌻\n不认识的也没关系，\n每次尝试都是进步！',
+  '曹操在吗？🎯\n一起来打气球咯，\n看看今天能得几颗星！',
+  '曹操你好！🦋\n游戏开始，放松心情，\n像蝴蝶一样开心地玩吧~'
+];
+
+function getRitualMsg(id){
+  const msgs=id==='huahua'?RITUAL_MSGS_huahua:RITUAL_MSGS_caocao;
+  // Pick based on session seed to vary each visit
+  const seed=Date.now()%msgs.length;
+  return msgs[Math.floor(Math.random()*msgs.length)];
+}
+
+// ==================== DOM EFFECTS ====================
+function toast(t){
+  const el=document.getElementById('toast');el.textContent=t;
+  el.classList.remove('show');void el.offsetWidth;el.classList.add('show');
+}
+function cele(t,ms){
+  const el=document.getElementById('celebration'),ct=document.getElementById('celebText');
+  ct.textContent=t;el.classList.add('on');sCeleb();
+  const cols=['#ff6b9d','#ffb347','#4ecdc4','#a8e06e','#b388ff','#ff4757','#2ed573','#ffa502'];
+  for(let i=0;i<30;i++){
+    const c=document.createElement('div');
+    c.style.cssText=`position:fixed;z-index:85;pointer-events:none;left:${10+Math.random()*80}%;top:-20px;background:${cols[Math.floor(Math.random()*cols.length)]};width:${5+Math.random()*7}px;height:${5+Math.random()*12}px;border-radius:${Math.random()>.5?'50%':'2px'};transition:all ${1.2+Math.random()*1.5}s cubic-bezier(.25,.46,.45,.94);transform:rotate(${Math.random()*360}deg);`;
+    document.body.appendChild(c);
+    requestAnimationFrame(()=>{c.style.top=`${80+Math.random()*20}%`;c.style.left=`${parseFloat(c.style.left)+(Math.random()-.5)*30}%`;c.style.transform=`rotate(${Math.random()*720}deg)`;c.style.opacity='0';});
+    setTimeout(()=>c.remove(),3500);
+  }
+  setTimeout(()=>el.classList.remove('on'),ms||2000);
+}
+function giftPackage(){
+  // 🎁 能量大礼包：弹窗+粒子雨+音效(cele内自带) + 少量积分奖励
+  const bonus=(GS.playerId==='caocao')?2:3; // 曹操+2 / 花花+3，积分不多不少
+  GS.score+=bonus;
+  const name=getPlayers()[GS.playerId].name;
+  // Extra gold confetti burst on top of cele()'s rain
+  for(let i=0;i<40;i++){
+    setTimeout(()=>spawnParticles(Math.random()*CW,80+Math.random()*CH*0.5,'#ffb347',1),i*35);
+  }
+  cele('🎁 能量大礼包！\n'+name+'连对奖励 +'+bonus+'分！',3400);
+  speak('哇！连续答对，能量大礼包！太厉害了！');
+  updateUI();savePlayerScore();
+}
+
+// ==================== CONTENT POOLS ====================
+// All pools have age-labeled tiers:
+// T0-T1: 幼儿园必备 (曹操 3岁)
+// T2+: 小学必备 (花花 5岁) - progressively harder
+const POOLS={
+  // Chinese: 汉字
+  chinese:{
+    tiers:[
+      // T0: 幼儿园入门 — 最基础象形字/常用字
+      ['一','二','三','人','口','手','大','小','上','下','日','月','水','火','山','石','木','田','土','天','云','雨','马','牛','羊','虫','鱼','鸟','花','草','门','车','头','目','耳','足'],
+      // T1: 幼儿园进阶 — 家庭/常见物
+      ['爸','妈','爷','奶','哥','姐','弟','妹','猫','狗','鸡','鸭','树','叶','果','米','面','花','星','白','红','黄','吃','喝','看','来','去','开','关','左','右','多','少','出','入'],
+      // T2: 幼小衔接 — 一年级上常用字
+      ['四','五','六','七','八','九','十','风','电','光','色','河','海','路','桥','家','校','书','笔','纸','坐','立','走','跑','跳','飞','哭','笑','听','说','读','写','男','女','早','晚'],
+      // T3: 小学一年级 — 课堂/学习
+      ['学','课','桌','椅','包','作','业','问','答','题','算','文','音','乐','美','体','数','前','后','高','低','快','慢','长','短','方','圆','角','正','反','对','错','画','图','灯'],
+      // T4: 小学二年级 — 抽象概念
+      ['爱','想','知','道','觉','得','喜','欢','谢','请','帮','忙','朋','友','同','老','师','医','生','工','故','事','歌','舞','游','戏','玩','笑','脸','会','能','可','以','要','还'],
+      // T5: 小学二年级+ — 词语
+      ['太阳','月亮','星星','天空','大地','河流','森林','花朵','树叶','小鱼','小鸟','大象','老虎','猴子','熊猫','春天','夏天','秋天','冬天','早上','晚上','学校','教室','同学','朋友'],
+      // T6: 小学三年级 — 更复杂词语
+      ['开心','快乐','美丽','可爱','勇敢','聪明','跑步','跳绳','唱歌','跳舞','画画','读书','写字','吃饭','睡觉','起床','刷牙','洗脸','洗手','游戏','风筝','下雨','下雪','刮风','闪电','阳光']
+    ],
+    toTier(l){if(l<=2)return 0;if(l<=5)return 1;if(l<=9)return 2;if(l<=13)return 3;if(l<=18)return 4;if(l<=24)return 5;return 6;}
+  },
+  // Numbers: 数字
+  number:{
+    tiers:[
+      ['0','1','2','3','4','5','6','7','8','9','10'],
+      ['11','12','13','14','15','16','17','18','19','20'],
+      (()=>{const a=[];for(let i=21;i<=50;i++)a.push(String(i));return a;})(),
+      (()=>{const a=[];for(let i=51;i<=100;i++)a.push(String(i));return a;})()
+    ],
+    toTier(l){if(l<=2)return 0;if(l<=5)return 1;if(l<=10)return 2;return 3;}
+  },
+  // Letters: 字母
+  letter:{
+    tiers:[
+      ['A','B','C','D','E','F','G','H','I','J'],
+      ['K','L','M','N','O','P','Q','R','S','T'],
+      ['U','V','W','X','Y','Z'],
+      ['cat','dog','sun','sky','red','big','hot','cup','bed','boy','run','sit'],
+      ['pen','hat','bus','egg','fox','ice','jam','key','leg','map','nut','owl','pig','cow','bee'],
+      ['apple','water','happy','green','three','house','school','mother','father','sister','brother','flower']
+    ],
+    toTier(l){if(l<=3)return 0;if(l<=7)return 1;if(l<=12)return 2;if(l<=17)return 3;if(l<=23)return 4;return 5;}
+  },
+  // Words: 单词 (NEW)
+  word:{
+    tiers:[
+      // T0: 幼儿园入门 — 最基础3字母单词, 常见名词
+      ['cat','dog','sun','red','big','hat','bed','cup','boy','run','sit','pen','bus'],
+      // T1: 幼儿园进阶 — 常见词
+      ['egg','fox','ice','jam','key','leg','map','nut','owl','pig','cow','bee','ant','box','sky','sea','top'],
+      // T2: 幼小衔接 — 4-5字母基础词
+      ['apple','water','happy','green','three','house','bird','fish','tree','star','moon','book','milk','cake','duck','frog','bear'],
+      // T3: 小学一年级 — 常见名词/形容词
+      ['mother','father','sister','brother','flower','table','chair','bread','horse','tiger','panda','music','river','stone','cloud','truck','bird','sheep','snake'],
+      // T4: 小学二年级 — 
+      ['monkey','rabbit','orange','yellow','pencil','window','teacher','friend','animal','garden','family','dinner','kitchen','school','purple','dragon'],
+      // T5: 小学三年级 — 
+      ['morning','evening','picture','elephant','butterfly','birthday','chicken','beautiful','delicious','umbrella','computer','mountain','rainbow','weekend']
+    ],
+    toTier(l){if(l<=3)return 0;if(l<=7)return 1;if(l<=12)return 2;if(l<=17)return 3;if(l<=22)return 4;return 5;}
+  }
+};
+
+function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
+function pick(a,n){const p=[...a],r=[];const m=Math.min(n,p.length);for(let i=0;i<m;i++){const k=Math.floor(Math.random()*p.length);r.push(p.splice(k,1)[0]);}return r;}
+
+// Age-adapted pool: 花花 gets more tiers, 曹操 limited to early tiers
+function getAgePool(){
+  const p=getPlayers()[GS.playerId];
+  const pool=POOLS[GS.mode],tiers=pool.tiers,pri=pool.toTier(GS.level);
+  const items=[];
+  if(p&&p.age===3){
+    // 曹操 (3岁, 幼儿园必备): strict tier cap
+    // Chinese/Number/Letter/Word: max tier 1 (kindergarten only)
+    // But with level progression: slowly expand
+    const maxTier=Math.min(pri,Math.min(1,tiers.length-1));
+    const startTier=0;
+    for(let t=startTier;t<=maxTier;t++){
+      const ratio=t===pri?.7:(t===pri-1||t===pri+1?.15:.1);
+      items.push(...pick(tiers[t],Math.max(5,Math.floor(tiers[t].length*ratio))));
+    }
+    // Ensure enough items by padding from pri if pool too small
+    if(items.length<8&&pri<tiers.length-1){
+      items.push(...pick(tiers[Math.min(pri+1,tiers.length-1)],6));
+    }
+  }else{
+    // 花花 (5岁, 小学必备): full tier range
+    items.push(...pick(tiers[pri],Math.max(8,Math.floor(tiers[pri].length*.7))));
+    if(pri>0)items.push(...pick(tiers[pri-1],Math.max(2,Math.floor(tiers[pri-1].length*.15))));
+    if(pri<tiers.length-1)items.push(...pick(tiers[pri+1],Math.max(2,Math.floor(tiers[pri+1].length*.15))));
+  }
+  return [...new Set(items)];
+}
+
+// ==================== PLAYER SYSTEM ====================
+const AVATARS={
+  huahua:"data:image/jpeg;base64,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",
+  caocao:"data:image/jpeg;base64,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"
+};
+const MODE_LABELS={chinese:'汉字',number:'数字',letter:'字母',word:'单词'};
+const PLAYERS_DEFAULT={
+  huahua:{name:'花花',age:5,avatar:AVATARS.huahua,scores:{chinese:0,number:0,letter:0,word:0},levels:{chinese:1,number:1,letter:1,word:1}},
+  caocao:{name:'曹操',age:3,avatar:AVATARS.caocao,scores:{chinese:0,number:0,letter:0,word:0},levels:{chinese:1,number:1,letter:1,word:1}}
+};
+function getPlayers(){
+  try{const d=JSON.parse(localStorage.getItem('wb_shooter_players'));if(d&&d.huahua&&d.caocao){
+    // Always refresh avatars to latest embedded base64 (fixes corrupted old data)
+    d.huahua.avatar=AVATARS.huahua;
+    d.caocao.avatar=AVATARS.caocao;
+    return d;
+  }}catch(e){}
+  return JSON.parse(JSON.stringify(PLAYERS_DEFAULT));
+}
+function savePlayers(p){localStorage.setItem('wb_shooter_players',JSON.stringify(p));}
+function getCurrentPlayer(){
+  try{const id=localStorage.getItem('wb_shooter_current');if(id&&getPlayers()[id])return id;}catch(e){}
+  return null;
+}
+function setCurrentPlayer(id){localStorage.setItem('wb_shooter_current',id);}
+
+const GS={mode:'chinese',score:0,energy:0,maxE:5,rb:0,level:1,cm:0,currentTarget:'',batchId:0,correctHit:false,balloons:[],particles:[],ripples:[],fbTexts:[],rafId:null,processing:false,playerId:'huahua',missRespawnTimer:null,launchTimer:null,streak:0};
+
+// ==================== RITUAL: player selection with encouragement ====================
+function cleanSpeech(t){
+  // strip emoji & newlines so TTS reads clean text
+  return String(t).replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{2190}-\u{21FF}\u{FE0F}]/gu,'').replace(/\s+/g,' ').trim();
+}
+function selectPlayer(id){
+  setCurrentPlayer(id);
+  document.getElementById('playerScreen').classList.add('hidden');
+  // Show ritual screen with encouragement
+  const p=getPlayers()[id];
+  document.getElementById('ritualAvatar').src=p.avatar;
+  document.getElementById('ritualName').textContent=p.name;
+  const msg=getRitualMsg(id);
+  document.getElementById('ritualWords').textContent=msg;
+  document.getElementById('ritualScreen').classList.remove('hidden');
+  // Pre-mark card
+  document.querySelectorAll('.player-card').forEach(c=>c.classList.remove('selected'));
+  const card=id==='huahua'?document.getElementById('cardHuahua'):document.getElementById('cardCaocao');
+  if(card)card.classList.add('selected');
+  // Speak the FULL blessing inside the user-gesture chain (iOS mutes speech in setTimeout)
+  aInit();
+  const speechTxt=cleanSpeech(msg)||(p.name+'，准备好了吗？开始冒险吧！');
+  speak(speechTxt);
+}
+
+function enterGame(){
+  document.getElementById('ritualScreen').classList.add('hidden');
+  document.getElementById('startScreen').classList.remove('hidden');
+  showPlayerInStart();
+}
+
+function showPlayerSelect(){
+  document.getElementById('startScreen').classList.add('hidden');
+  document.getElementById('gameScreen').classList.add('hidden');
+  document.getElementById('gameCanvas').classList.remove('active');
+  document.getElementById('ritualScreen').classList.add('hidden');
+  document.getElementById('playerScreen').classList.remove('hidden');
+  document.querySelectorAll('.player-card').forEach(c=>c.classList.remove('selected'));
+  const id=getCurrentPlayer();
+  if(id){
+    const card=id==='huahua'?document.getElementById('cardHuahua'):document.getElementById('cardCaocao');
+    if(card)card.classList.add('selected');
+  }
+}
+
+function showPlayerInStart(){
+  const p=getPlayers()[getCurrentPlayer()];
+  if(!p)return;
+  const bar=document.getElementById('startPlayerBar');
+  document.getElementById('spAvatar').src=p.avatar;
+  document.getElementById('spName').textContent=p.name;
+  document.getElementById('spAge').textContent=p.age+'岁 · '+(p.age===5?'幼小衔接·小学必备':'启蒙入门·幼儿园必备');
+  bar.style.display='flex';
+}
+
+function showPlayerInGame(){
+  const p=getPlayers()[getCurrentPlayer()];
+  if(!p)return;
+  const card=document.getElementById('scoreCard');
+  document.getElementById('scAvatar').src=p.avatar;
+  document.getElementById('scName').textContent=p.name;
+  card.style.display='flex';
+}
+
+function updateScoreCard(){
+  const p=getPlayers()[GS.playerId];
+  if(!p)return;
+  document.getElementById('scScoreNum').textContent=p.scores[GS.mode]||0;
+  document.getElementById('scLevel').textContent='第'+(p.levels[GS.mode]||1)+'关';
+}
+
+function savePlayerScore(){
+  const p=getPlayers();
+  const id=GS.playerId;
+  if(!p[id])return;
+  p[id].scores[GS.mode]=GS.score;
+  p[id].levels[GS.mode]=GS.level;
+  savePlayers(p);
+  updateScoreCard();
+}
+
+// On page load
+(function(){
+  const id=getCurrentPlayer();
+  const p=getPlayers()[id];
+  if(!p){savePlayers(JSON.parse(JSON.stringify(PLAYERS_DEFAULT)));}
+  if(!id){
+    // First visit or no selection: show player select
+    document.getElementById('playerScreen').classList.remove('hidden');
+    document.getElementById('startScreen').classList.add('hidden');
+    document.getElementById('ritualScreen').classList.add('hidden');
+  }else{
+    // Returning: go directly to ritual (not player screen)
+    document.getElementById('playerScreen').classList.add('hidden');
+    document.getElementById('startScreen').classList.add('hidden');
+    document.getElementById('ritualScreen').classList.add('hidden');
+    // Just show start screen since they already chose
+    document.getElementById('startScreen').classList.remove('hidden');
+    showPlayerInStart();
+  }
+})();
+
+// ==================== CANVAS SETUP ====================
+const canvas=document.getElementById('gameCanvas');
+const ctx=canvas.getContext('2d');
+let CW=0,CH=0;
+function resizeCanvas(){
+  const dpr=window.devicePixelRatio||1;
+  CW=window.innerWidth;CH=window.innerHeight;
+  canvas.width=CW*dpr;canvas.height=CH*dpr;
+  canvas.style.width=CW+'px';canvas.style.height=CH+'px';
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+resizeCanvas();
+window.addEventListener('resize',resizeCanvas);
+window.addEventListener('orientationchange',()=>setTimeout(resizeCanvas,100));
+
+// ==================== COLORS ====================
+const BALLOON_COLORS=['#ff6b9d','#4ecdc4','#a8e06e','#b388ff','#ffa502','#ff4757','#2ed573','#7bed9f','#ff9f43','#54a0ff'];
+function lighten(h){const r=Math.min(255,parseInt(h.slice(1,3),16)+60);const g=Math.min(255,parseInt(h.slice(3,5),16)+60);const b=Math.min(255,parseInt(h.slice(5,7),16)+60);return`rgb(${r},${g},${b})`;}
+
+// ==================== BALLOON ====================
+class Balloon{
+  constructor(char,color,isTarget){
+    this.char=char;this.color=color;this.isTarget=isTarget;
+    this.alive=true;this.popping=false;this.fading=false;this.fadingT=0;
+    this.radius=40;
+    this.x=80+Math.random()*(CW-160);
+    this.y=CH+60;
+    this.targetY=100;
+    this.riseSpeed=0.55+Math.random()*0.30;
+    this.swayAmp=0.5+Math.random()*1.0;
+    this.swayFreq=0.015+Math.random()*0.01;
+    this.swayPhase=Math.random()*Math.PI*2;
+    this.frame=0;
+  }
+  update(){
+    if(!this.alive)return;
+    this.frame++;
+    this.y-=this.riseSpeed;
+    if(this.popping)return;
+    if(this.fading){this.fadingT+=0.02;if(this.fadingT>=1){this.alive=false;}return;}
+    this.x+=Math.sin(this.frame*this.swayFreq+this.swayPhase)*this.swayAmp;
+    this.x=Math.max(this.radius+10,Math.min(CW-this.radius-10,this.x));
+    this.y=Math.max(this.radius+10,Math.min(CH-this.radius-10,this.y));
+    if(this.y<this.targetY){this.fading=true;this.fadingT=0;}
+  }
+  draw(){
+    if(!this.alive)return;
+    const alpha=this.fading?1-this.fadingT:1;
+    ctx.save();ctx.globalAlpha=alpha;ctx.translate(this.x,this.y);
+    // String
+    ctx.beginPath();ctx.moveTo(0,this.radius);ctx.quadraticCurveTo(8,this.radius+12,4,this.radius+24);
+    ctx.strokeStyle='rgba(255,255,255,0.25)';ctx.lineWidth=1.5;ctx.stroke();
+    // Body
+    const grad=ctx.createRadialGradient(-8,-12,5,0,0,this.radius);
+    grad.addColorStop(0,lighten(this.color));grad.addColorStop(1,this.color);
+    ctx.fillStyle=grad;ctx.beginPath();ctx.arc(0,0,this.radius,0,Math.PI*2);ctx.fill();
+    // Knot
+    ctx.beginPath();ctx.arc(0,-this.radius+4,5,0,Math.PI*2);ctx.fillStyle=this.color;ctx.fill();
+    // Text: white fill + thick dark outline + dark shadow -> readable on ANY balloon color
+    ctx.fillStyle='#ffffff';
+    const cLen=this.char.length;
+    let fontSize=30;
+    if(GS.mode==='word'){fontSize=Math.max(13,25-(cLen-3)*2.5);}
+    else if(GS.mode==='letter'&&cLen>3){fontSize=Math.max(13,30-(cLen-3)*3);}
+    else if(cLen>1&&GS.mode==='chinese'){fontSize=cLen>2?17:23;}
+    ctx.font=`900 ${fontSize}px -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.lineJoin='round';
+    ctx.lineWidth=6;
+    ctx.strokeStyle='rgba(35,15,55,0.85)';
+    ctx.shadowColor='rgba(0,0,0,0.55)';ctx.shadowBlur=6;ctx.shadowOffsetY=2;
+    ctx.strokeText(this.char,0,-2);
+    ctx.fillText(this.char,0,-2);
+    ctx.shadowBlur=0;ctx.shadowOffsetY=0;ctx.restore();
+  }
+  hitTest(px,py){return Math.hypot(px-this.x,py-this.y)<=this.radius+12;}
+}
+
+// ==================== PARTICLES ====================
+class Particle{
+  constructor(x,y,color){this.x=x;this.y=y;this.vx=(Math.random()-.5)*6;this.vy=(Math.random()-.5)*6-2;this.life=1;this.decay=.02+Math.random()*.03;this.color=color;this.size=3+Math.random()*5;}
+  update(){this.x+=this.vx;this.y+=this.vy;this.life-=this.decay;this.vy+=.1;return this.life>0;}
+  draw(){ctx.save();ctx.globalAlpha=this.life;ctx.fillStyle=this.color;ctx.beginPath();ctx.arc(this.x,this.y,this.size,0,Math.PI*2);ctx.fill();ctx.restore();}
+}
+function spawnParticles(x,y,color,n){for(let i=0;i<n;i++)GS.particles.push(new Particle(x,y,color));}
+
+// ==================== DRAW LOOP (with auto-respawn check) ====================
+function drawLoop(){
+  ctx.clearRect(0,0,CW,CH);
+  // Draw ripples (empty-space feedback)
+  GS.ripples=GS.ripples.filter(r=>{r.r+=4;r.alpha-=.06;return r.alpha>0;});
+  GS.ripples.forEach(r=>{ctx.save();ctx.globalAlpha=r.alpha;ctx.strokeStyle='rgba(255,255,255,0.5)';ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(r.x,r.y,r.r,0,Math.PI*2);ctx.stroke();ctx.restore();});
+  // Draw particles
+  GS.particles=GS.particles.filter(p=>p.update());
+  GS.particles.forEach(p=>p.draw());
+  // Draw balloons
+  GS.balloons.forEach(b=>{b.update();b.draw();});
+  // Avoid overlapping
+  avoidCollisions();
+  // Draw canvas feedback texts (always visible, DOM/CSS independent)
+  GS.fbTexts=GS.fbTexts.filter(f=>{
+    const age=(performance.now()-f.t0)/1000;
+    if(age>2.8)return false;
+    ctx.save();
+    ctx.globalAlpha=Math.max(0,1-age/2.8);
+    ctx.fillStyle=f.color;
+    ctx.font='800 '+f.size+'px -apple-system,"PingFang SC",sans-serif';
+    ctx.textAlign='center';
+    ctx.shadowColor='rgba(0,0,0,.5)';ctx.shadowBlur=10;
+    ctx.fillText(f.t,f.x,Math.max(48,f.y-16-age*28));
+    ctx.restore();
+    return true;
+  });
+  // AUTO-RESPAWN CHECK: if all balloons gone and no correct hit, trigger new batch
+  if(!GS.processing&&!GS.correctHit&&GS.balloons.length>0){
+    const aliveCount=GS.balloons.filter(b=>b.alive&&!b.popping&&!b.fading).length;
+    const totalAlive=GS.balloons.filter(b=>b.alive).length;
+    if(totalAlive===0&&!GS.missRespawnTimer){
+      // All balloons gone, schedule respawn after 2.5s (not 40s!)
+      GS.missRespawnTimer=setTimeout(()=>{
+        GS.missRespawnTimer=null;
+        if(!GS.correctHit&&!GS.processing){
+          GS.cm++;
+          toast('🎈 气球飘走啦~ 新一批来咯！');
+          speak('没关系，新气球来了，再试试！');
+          sMiss();
+          launch();
+        }
+      },2500);
+    }
+  }
+  GS.rafId=requestAnimationFrame(drawLoop);
+}
+
+// ==================== COLLISION AVOIDANCE ====================
+function avoidCollisions(){
+  const alive=GS.balloons.filter(b=>b.alive&&!b.popping&&!b.fading);
+  for(let i=0;i<alive.length;i++){
+    for(let j=i+1;j<alive.length;j++){
+      const a=alive[i],b=alive[j];
+      const dx=b.x-a.x,dy=b.y-a.y;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      const minDist=a.radius+b.radius+30;
+      if(dist<minDist&&dist>.001){
+        const overlap=minDist-dist;
+        const nx=dx/dist,ny=dy/dist;
+        a.x-=nx*overlap*.5;a.y-=ny*overlap*.5;
+        b.x+=nx*overlap*.5;b.y+=ny*overlap*.5;
+        a.x=Math.max(a.radius+10,Math.min(CW-a.radius-10,a.x));
+        a.y=Math.max(a.radius+10,Math.min(CH-a.radius-10,a.y));
+        b.x=Math.max(b.radius+10,Math.min(CW-b.radius-10,b.x));
+        b.y=Math.max(b.radius+10,Math.min(CH-b.radius-10,b.y));
+      }
+    }
+  }
+}
+
+// ==================== CANVAS CLICK/TAP HANDLER ====================
+function addRipple(x,y){GS.ripples.push({x,y,r:6,alpha:.7});}
+function canvasText(t,x,y,color,size){
+  if(!t)return;
+  const lines=String(t).split('\n');
+  lines.forEach((ln,i)=>{GS.fbTexts.push({t:ln,x,y:y+i*30,color:color||'#ffb347',size:size||20,t0:performance.now()});});
+}
+// Debounce: dedup the SAME physical tap that fires BOTH touchstart and click.
+// Different spots tapped quickly (<350ms apart) must still register.
+let _lastTap={t:0,type:'',x:-999,y:-999};
+function handleCanvasTap(ex,ey,etype){
+  const now=Date.now();
+  // same physical tap => touchstart+click pair within 300ms at ~same spot: skip the 2nd
+  if(now-_lastTap.t<300&&etype!==_lastTap.type&&Math.hypot(ex-_lastTap.x,ey-_lastTap.y)<40){
+    _lastTap={t:now,type:etype,x:ex,y:ey};
+    return false;
+  }
+  _lastTap={t:now,type:etype,x:ex,y:ey};
+  if(GS.processing)return false;
+  if(!GS.balloons.length)return false;
+  for(let i=GS.balloons.length-1;i>=0;i--){
+    const b=GS.balloons[i];
+    if(!b.alive||b.popping||b.fading)continue;
+    if(b.hitTest(ex,ey)){b.shoot();return true;}
+  }
+  // Clicked empty space
+  sBlank();addRipple(ex,ey);
+  return false;
+}
+
+canvas.addEventListener('click',function(e){
+  if(document.getElementById('gameScreen').classList.contains('hidden'))return;
+  const rect=canvas.getBoundingClientRect();
+  handleCanvasTap(e.clientX-rect.left,e.clientY-rect.top,'click');
+});
+
+canvas.addEventListener('touchstart',function(e){
+  if(document.getElementById('gameScreen').classList.contains('hidden'))return;
+  e.preventDefault();
+  const rect=canvas.getBoundingClientRect();
+  for(const t of e.changedTouches){
+    if(handleCanvasTap(t.clientX-rect.left,t.clientY-rect.top,'touch'))return;
+  }
+},{passive:false});
+
+// ===== SAFETY NET: forward taps that land on gameScreen UI elements =====
+// (in case any UI child keeps pointer-events:auto, taps there would be eaten)
+function fwdTap(cx,cy,etype){
+  if(document.getElementById('gameScreen').classList.contains('hidden'))return;
+  if(GS.processing)return;
+  const rect=canvas.getBoundingClientRect();
+  handleCanvasTap(cx-rect.left,cy-rect.top,etype);
+}
+document.addEventListener('touchstart',function(e){
+  const t=e.target;
+  if(!t||!t.closest)return;
+  if(t.closest('#backBtn'))return;           // real interactive button
+  if(t.closest('#gameScreen')){              // eaten by a UI child -> forward
+    for(const tc of e.changedTouches)fwdTap(tc.clientX,tc.clientY,'touch');
+  }
+},{passive:true});
+document.addEventListener('click',function(e){
+  const t=e.target;
+  if(!t||!t.closest)return;
+  if(t.closest('#backBtn'))return;
+  if(t.closest('#gameScreen'))fwdTap(e.clientX,e.clientY,'click');
+});
+
+// ==================== GAME FLOW ====================
+function goHome(){
+  stopAll();GS.processing=false;
+  document.getElementById('startScreen').classList.remove('hidden');
+  document.getElementById('gameScreen').classList.add('hidden');
+  document.getElementById('gameCanvas').classList.remove('active');
+}
+
+function stopAll(){
+  if(GS.rafId){cancelAnimationFrame(GS.rafId);GS.rafId=null;}
+  if(GS.missRespawnTimer){clearTimeout(GS.missRespawnTimer);GS.missRespawnTimer=null;}
+  if(GS.launchTimer){clearTimeout(GS.launchTimer);GS.launchTimer=null;}
+  GS.balloons=[];GS.particles=[];GS.fbTexts=[];GS.ripples=[];
+}
+
+function start(mode){
+  const id=getCurrentPlayer();
+  if(!id){showPlayerSelect();return;}
+  GS.playerId=id;
+  const p=getPlayers()[id];
+  if(!p){console.error('Player not found');return;}
+  // Load player progress
+  GS.score=p.scores[mode]||0;
+  GS.level=p.levels[mode]||1;
+  showPlayerInGame();
+  updateScoreCard();
+  // Init audio & stop previous
+  aInit();stopAll();
+  if(actx&&actx.state==='suspended')actx.resume();
+  GS.mode=mode;GS.energy=0;GS.rb=0;GS.cm=0;GS.correctHit=false;GS.processing=false;GS.streak=0;
+  GS.batchId++; // monotonic — NEVER reset to 0, or a stale batch from the previous
+                // round could reuse the same id and leak its balloons into this one
+  // Show mode label
+  document.getElementById('modeLabel').textContent='📌 '+MODE_LABELS[mode]+'模式';
+  // Switch screens
+  document.getElementById('startScreen').classList.add('hidden');
+  document.getElementById('gameScreen').classList.remove('hidden');
+  document.getElementById('gameCanvas').classList.add('active');
+  resizeCanvas();
+  updateScoreCard();updateUI();
+  // Kick off
+  GS.rafId=requestAnimationFrame(drawLoop);
+  GS.launchTimer=setTimeout(launch,300);
+}
+
+function updateUI(){
+  document.getElementById('levelBadge').textContent='第'+GS.level+'关';
+  document.getElementById('energyBarFill').style.width=(GS.energy/GS.maxE*100)+'%';
+  document.querySelectorAll('.rdot').forEach((d,i)=>d.classList.toggle('on',i<GS.rb));
+}
+
+// Override goHome to save score
+const _origGoHome=goHome;
+goHome=function(){
+  savePlayerScore();
+  _origGoHome();
+  document.getElementById('scoreCard').style.display='none';
+};
+
+// ==================== SHOOT (with full feedback) ====================
+Balloon.prototype.shoot=function(){
+  GS.processing=true;
+  const cx=this.x,cy=this.y;
+
+  if(this.char===GS.currentTarget){
+    // ===== 🎯 HIT! Correct balloon =====
+    sHit();GS.correctHit=true;GS.cm=0;
+    // Clear miss respawn timer if active
+    if(GS.missRespawnTimer){clearTimeout(GS.missRespawnTimer);GS.missRespawnTimer=null;}
+    // Big gold explosion particles
+    spawnParticles(cx,cy,'#ffb347',30);
+    this.popping=true;setTimeout(()=>this.alive=false,280);
+    // Random enthusiastic cheer + explicit "你答对了" + read the item aloud
+    const cheers=['太棒啦！🎉','你真厉害！⭐','击中啦！💥','好枪法！🔫','一百分！💯','完美！✨','小神枪手！🎯','真聪明！🧠'];
+    const cheer=cheers[Math.floor(Math.random()*cheers.length)];
+    const cheerTxt=cheer.replace(/[^\u4e00-\u9fa5\u0030-\u0039\u0041-\u005a\u0061-\u007a！]+/g,'');
+    const unit=GS.mode==='number'?'数字':(GS.mode==='letter'?'字母':(GS.mode==='word'?'单词':'字'));
+    // FULL feedback sentence: praise + explicit "你答对了" + the item (spoken ~2.5s, not a flash)
+    const hitMsg=cheerTxt+'你答对了！这是'+unit+'「'+this.char+'」！';
+    toast(hitMsg);
+    canvasText(cheerTxt+'\n答对了！',cx,cy-24,'#ffb347',30);
+    // Speak the FULL sentence — queue mode guarantees it plays to completion
+    speak(hitMsg);
+    GS.score++;GS.energy++;
+    // ===== 连续答对 streak + 大礼包（优先级最高：触发时跳过能量大爆发，避免弹窗撞车） =====
+    GS.streak++;
+    let giftDelay=0;
+    let giftGot=false;
+    const streakNeed=(GS.playerId==='caocao')?5:10; // 曹操5连 / 花花10连
+    if(GS.streak>=streakNeed){
+      GS.streak=0;giftDelay=2600;giftGot=true;
+      giftPackage(); // 大礼包：弹窗+粒子+音效+加分+语音
+    }else if(streakNeed-GS.streak===1){
+      toast('还差1个就集满能量大礼包啦！');
+      canvasText('再对1个！大礼包等着你~',cx,cy-46,'#ffb347',16);
+    }
+    // 能量条（大礼包触发时不再弹"能量大爆发"，两个庆祝不能叠一起）
+    if(!giftGot&&GS.energy>=GS.maxE){
+      GS.energy=0;GS.rb++;
+      if(GS.rb>=3){GS.rb=0;GS.level++;setTimeout(()=>cele('🌈 关卡升级！\n进入第'+GS.level+'关'),350);}
+      else{setTimeout(()=>cele('💥 能量大爆发！'),300);}
+    }
+    updateUI();savePlayerScore();
+    // Clear other balloons, spawn new batch
+    GS.balloons.forEach(b=>{if(b!==this&&b.alive)b.alive=false;});
+    GS.balloons=GS.balloons.filter(b=>b===this);
+    GS.processing=false;
+    // Wait for the "你答对了" speech to finish before next round, plus extra
+    // time when a gift package is being celebrated. Estimate mirrors the speech
+    // watchdog (len*300+2000ms) so the audio has time to complete.
+    const hitDelay=Math.min(giftGot?8500:6500,hitMsg.length*300+2000+giftDelay);
+    GS.launchTimer=setTimeout(launch,hitDelay);
+  }else{
+    // ===== ❌ MISS: clicked wrong balloon =====
+    GS.cm++;sMiss();
+    // Gray/white particles — distinct from gold hit particles
+    spawnParticles(cx,cy,'rgba(190,190,200,0.65)',10);
+    this.popping=true;setTimeout(()=>this.alive=false,220);
+
+    const clicked='「'+this.char+'」';
+    const target='「'+GS.currentTarget+'」';
+    let msg='';
+    if(GS.cm===1){
+      // First miss: gentle info
+      msg='这是'+clicked+'哦~ 找找'+target+'在哪？';
+    }else if(GS.cm===2){
+      // Second miss: hint + highlight target
+      msg='再试试！发光的就是'+target+'~';
+      const t=GS.balloons.find(b=>b.isTarget&&b.alive&&!b.popping);
+      if(t)spawnParticles(t.x,t.y,'#ffb347',6);
+    }else{
+      // Third+ miss: strong guide + more particles
+      msg='快看！亮闪闪的'+target+'在那呢~';
+      const t2=GS.balloons.find(b=>b.isTarget&&b.alive&&!b.popping);
+      if(t2)spawnParticles(t2.x,t2.y,'#ffb347',10);
+    }
+    // Streak broken: gentle visual nudge (does NOT occupy the speech queue)
+    if(GS.streak>=2){
+      const need=(GS.playerId==='caocao')?5:10;
+      canvasText('连对'+GS.streak+'个！再对'+(need-GS.streak)+'个拿大礼包~',cx,cy-46,'#ffb347',15);
+    }
+    GS.streak=0;
+    // Only audio + visual feedback on miss; NO text toast/canvas text (parent request)
+    const enc=['没关系，再试试！','小手枪加油！','你可以的！','瞄准亮闪闪的！','别急，慢慢来~'];
+    speak(enc[Math.floor(Math.random()*enc.length)]);
+    updateUI();savePlayerScore();
+    GS.processing=false;
+  }
+};
+
+// ==================== LAUNCH ====================
+function launch(){
+  if(GS.launchTimer){clearTimeout(GS.launchTimer);GS.launchTimer=null;}
+  // Clean up dead balloons
+  GS.balloons=GS.balloons.filter(b=>b.alive);
+  GS.ripples=[];
+  // NOTE: particles & fbTexts intentionally NOT cleared here — a correct hit's
+  // explosion particles and "答对了！" canvas text must play out naturally
+  // (they self-expire via their own lifetimes), otherwise the next batch would
+  // flash-cut the celebration the instant it appears.
+  GS.correctHit=false;GS.batchId++;
+  const bid=GS.batchId; // snapshot — stale timers from a PREVIOUS batch must not leak balloons
+  // Clear any pending respawn timer
+  if(GS.missRespawnTimer){clearTimeout(GS.missRespawnTimer);GS.missRespawnTimer=null;}
+
+  const pool=getAgePool();
+  const shuffled=shuffle(pool);
+  const n=Math.min(4+Math.floor(GS.level/3),pool.length);
+  const correct=shuffled[0];
+  const distractors=shuffled.slice(1,n);
+  GS.currentTarget=correct;
+  document.getElementById('promptTarget').textContent=correct;
+
+  // Speak target with mode-specific voice
+  if(GS.mode==='word'){
+    speakWord('Find '+correct);
+  }else{
+    const prefix=GS.mode==='number'?'数字':(GS.mode==='letter'?'字母':'');
+    speak('找到'+prefix+correct);
+  }
+
+  const chars=shuffle([correct,...distractors]);
+  chars.forEach((ch,i)=>{
+    setTimeout(()=>{
+      // Batch guard: if a NEW batch started while this timer was pending (mode
+      // switch / quit & restart), DROP it — otherwise a balloon from the previous
+      // mode (e.g. 汉字) would sneak into the current batch (e.g. 数字).
+      if(bid!==GS.batchId)return;
+      const b=new Balloon(ch,BALLOON_COLORS[i%BALLOON_COLORS.length],ch===correct);
+      GS.balloons.push(b);
+    },i*500);
+  });
+}
+
+// ==================== STORE / POINTS ====================
+function getStore(){
+  try{
+    const d=JSON.parse(localStorage.getItem('wb_shooter_store'));
+    if(d&&typeof d.points==='number')return d;
+  }catch(e){}
+  return {points:0,records:[]};
+}
+function saveStore(s){localStorage.setItem('wb_shooter_store',JSON.stringify(s));}
+function addPoints(n){
+  const s=getStore();s.points+=n;saveStore(s);updateStoreBtn();
+}
+function spendPoints(n){
+  const s=getStore();if(s.points>=n){s.points-=n;saveStore(s);updateStoreBtn();return true;}return false;
+}
+function updateStoreBtn(){
+  const s=getStore();const el=document.getElementById('storePts');if(el)el.textContent=s.points;
+}
+function showStore(){
+  document.getElementById('startScreen').classList.add('hidden');
+  document.getElementById('storeScreen').classList.remove('hidden');
+  renderStore();
+}
+function goStoreBack(){
+  document.getElementById('storeScreen').classList.add('hidden');
+  document.getElementById('startScreen').classList.remove('hidden');
+}
+function renderStore(){
+  const s=getStore();updateStoreBtn();
+  const grid=document.getElementById('storeGrid');
+  if(!grid)return;
+  const items=[
+    {icon:'📺',name:'看一集动画片',cost:15},
+    {icon:'🍦',name:'吃一个冰淇淋',cost:20},
+    {icon:'🌳',name:'去公园玩',cost:30},
+    {icon:'📚',name:'选一本新绘本',cost:40},
+    {icon:'🧸',name:'买一个小玩具',cost:60},
+  ];
+  grid.innerHTML=items.map(it=>{
+    const can=s.points>=it.cost;
+    return `<div class="store-item">
+      <div class="s-icon">${it.icon}</div>
+      <div class="s-name">${it.name}</div>
+      <div class="s-cost">⭐ ${it.cost}积分</div>
+      <button class="s-btn" ${can?'':'disabled'} onclick="buyItem('${it.name}',${it.cost})">${can?'兑换':'积分不足'}</button>
+    </div>`;
+  }).join('');
+  const list=document.getElementById('storeRecordList');
+  if(list){
+    if(s.records.length===0){
+      list.innerHTML='<div style="font-size:13px;color:#8e8ea0;text-align:center">还没有兑换记录</div>';
+    }else{
+      list.innerHTML=s.records.slice().reverse().map(r=>{
+        return `<div class="store-record-item">
+          <span class="rec-name">${r.name}</span>
+          <span class="rec-pts">-${r.cost}⭐</span>
+          <span class="rec-date">${r.date}</span>
+        </div>`;
+      }).join('');
+    }
+  }
+}
+function buyItem(name,cost){
+  const s=getStore();
+  if(s.points<cost){speak('积分不够哦，继续努力吧！');return;}
+  s.points-=cost;
+  const now=new Date();
+  const date=now.getFullYear()+'-'+(now.getMonth()+1).toString().padStart(2,'0')+'-'+now.getDate().toString().padStart(2,'0');
+  s.records.push({name,cost,date});
+  saveStore(s);
+  renderStore();
+  cele('兑换成功！\n'+name,2200);
+  speak('太棒了！你兑换了'+name+'！');
+}
+
+// ==================== PARENT MODE ====================
+function getParent(){try{const d=JSON.parse(localStorage.getItem('wb_shooter_parent'));if(d)return d;}catch(e){}return {password:null};}
+function saveParent(p){localStorage.setItem('wb_shooter_parent',JSON.stringify(p));}
+function showParent(){
+  document.getElementById('startScreen').classList.add('hidden');
+  document.getElementById('parentScreen').classList.remove('hidden');
+  const p=getParent();
+  const gate=document.getElementById('pwdGate');
+  const dash=document.getElementById('parentDash');
+  if(p.password){
+    gate.style.display='flex';
+    dash.classList.add('hidden');
+    document.getElementById('pwdHint').textContent='请输入家长密码';
+  }else{
+    gate.style.display='flex';
+    dash.classList.add('hidden');
+    document.getElementById('pwdHint').textContent='首次进入请设置4位密码';
+  }
+  // clear inputs
+  for(let i=1;i<=4;i++){document.getElementById('pd'+i).value='';}
+  document.getElementById('pwdError').textContent='';
+}
+function goParentBack(){
+  document.getElementById('parentScreen').classList.add('hidden');
+  document.getElementById('startScreen').classList.remove('hidden');
+  // reset tab to today
+  switchParentTab('today');
+}
+function pwdInput(idx){
+  const el=document.getElementById('pd'+idx);
+  if(el.value.length>=1&&idx<4)document.getElementById('pd'+(idx+1)).focus();
+}
+function checkPwd(){
+  const digits=[];for(let i=1;i<=4;i++)digits.push(document.getElementById('pd'+i).value);
+  const pwd=digits.join('');
+  const p=getParent();
+  const err=document.getElementById('pwdError');
+  if(pwd.length!==4){err.textContent='请输入4位密码';return;}
+  if(!p.password){
+    p.password=pwd;saveParent(p);
+    err.textContent='';err.style.color='#4ecdc4';err.textContent='密码设置成功！';
+    setTimeout(()=>enterParentDash(),500);
+  }else if(p.password===pwd){
+    err.textContent='';enterParentDash();
+  }else{
+    err.textContent='密码错误，请重试';
+    for(let i=1;i<=4;i++)document.getElementById('pd'+i).value='';
+    document.getElementById('pd1').focus();
+  }
+}
+function enterParentDash(){
+  document.getElementById('pwdGate').style.display='none';
+  document.getElementById('parentDash').classList.remove('hidden');
+  renderParentToday();
+}
+function switchParentTab(tab){
+  ['today','week','weak'].forEach(t=>{
+    document.getElementById('p'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('hidden',t!==tab);
+    document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('active',t===tab);
+  });
+  if(tab==='today')renderParentToday();
+  if(tab==='week')renderParentWeek();
+  if(tab==='weak')renderParentWeak();
+}
+function renderParentToday(){
+  const d=getDaily();const t=getTest();const w=getWeak();
+  const now=new Date();
+  const date=now.getFullYear()+'-'+(now.getMonth()+1).toString().padStart(2,'0')+'-'+now.getDate().toString().padStart(2,'0');
+  document.getElementById('ptDate').textContent=date;
+  const done=(d.sessions||[]).filter(s=>s.date===date).length;
+  document.getElementById('ptDone').textContent=done+'/3 次';
+  // score from daily
+  let score=0;(d.sessions||[]).forEach(s=>{score+=(s.correct||0);});
+  document.getElementById('ptScore').textContent=score;
+  // test rate
+  const td=t[date];let rateStr='--';
+  if(td){let total=0,correct=0;['chinese','number','letter','word'].forEach(m=>{if(td[m]){total+=td[m].total||0;correct+=td[m].correct||0;}});if(total>0)rateStr=Math.round(correct/total*100)+'%';}
+  document.getElementById('ptRate').textContent=rateStr;
+  // content
+  const contentDiv=document.getElementById('ptContent');
+  let contentHtml='';
+  ['chinese','number','letter','word'].forEach(m=>{
+    const items=(d.content||{})[m]||[];
+    if(items.length>0){
+      contentHtml+='<div style="margin-bottom:4px"><span style="color:#ffb347">'+MODE_LABELS[m]+'</span>：'+items.join('、')+'</div>';
+    }
+  });
+  contentDiv.innerHTML=contentHtml||'<div style="color:#8e8ea0">今天还没有生成学习内容，让孩子先玩一局吧！</div>';
+}
+function renderParentWeek(){
+  const chart=document.getElementById('weekChart');
+  const t=getTest();const now=new Date();
+  const days=[];const rates=[];
+  for(let i=6;i>=0;i--){
+    const d=new Date(now);d.setDate(d.getDate()-i);
+    const ds=d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0')+'-'+d.getDate().toString().padStart(2,'0');
+    days.push((d.getMonth()+1)+'/'+d.getDate());
+    const td=t[ds];let total=0,correct=0;
+    if(td){['chinese','number','letter','word'].forEach(m=>{if(td[m]){total+=td[m].total||0;correct+=td[m].correct||0;}});}
+    rates.push(total>0?Math.round(correct/total*100):0);
+  }
+  const maxR=Math.max(...rates,100);
+  chart.innerHTML=rates.map((r,i)=>{
+    const h=Math.max(8,Math.round(r/maxR*100));
+    return `<div class="wc-bar" style="height:${h}px"><div class="wc-pct">${r}%</div><div class="wc-label">${days[i]}</div></div>`;
+  }).join('');
+  // summary
+  const d=getDaily();let totalS=0,totalC=0,totalW=0;
+  (d.sessions||[]).forEach(s=>{totalS++;totalC+=(s.correct||0);totalW+=(s.wrong||0);});
+  document.getElementById('pwTotal').textContent=totalS;
+  document.getElementById('pwCorrect').textContent=totalC;
+  document.getElementById('pwWrong').textContent=totalW;
+  const avg=totalS>0?Math.round(totalC/(totalC+totalW)*100)+'%':'--';
+  document.getElementById('pwAvg').textContent=avg;
+}
+function renderParentWeak(){
+  const w=getWeak();const list=document.getElementById('weakList');
+  let html='';
+  ['chinese','number','letter','word'].forEach(m=>{
+    const items=(w[m]||[]).filter(x=>x.wrongCount>=2).sort((a,b)=>b.wrongCount-a.wrongCount);
+    if(items.length>0){
+      html+='<div style="margin-bottom:8px"><span style="color:#ffb347">'+MODE_LABELS[m]+'</span>：';
+      html+=items.slice(0,10).map(x=>x.char+'('+x.wrongCount+'次)').join('、');
+      html+='</div>';
+    }
+  });
+  list.innerHTML=html||'<div style="color:#8e8ea0">还没有记录到弱项，孩子表现很棒！</div>';
+}
+
+// ==================== DAILY LEARNING SYSTEM ====================
+const MAX_SESSIONS=3;
+const SESSION_MINUTES=20;
+const MODE_MINUTES=5;
+const MODE_ITEMS=5; // each mode practices 5 items per day
+function getDaily(){
+  try{
+    const d=JSON.parse(localStorage.getItem('wb_shooter_daily'));
+    if(d&&d.date){
+      const now=new Date();
+      const today=now.getFullYear()+'-'+(now.getMonth()+1).toString().padStart(2,'0')+'-'+now.getDate().toString().padStart(2,'0');
+      if(d.date===today)return d;
+    }
+  }catch(e){}
+  return {date:'',content:{},sessions:[],test:{}};
+}
+function saveDaily(d){localStorage.setItem('wb_shooter_daily',JSON.stringify(d));}
+function getWeak(){
+  try{const d=JSON.parse(localStorage.getItem('wb_shooter_weak'));if(d)return d;}catch(e){}
+  return {chinese:[],number:[],letter:[],word:[]};
+}
+function saveWeak(w){localStorage.setItem('wb_shooter_weak',JSON.stringify(w));}
+function getTest(){
+  try{const d=JSON.parse(localStorage.getItem('wb_shooter_test'));if(d)return d;}catch(e){}
+  return {};
+}
+function saveTest(t){localStorage.setItem('wb_shooter_test',JSON.stringify(t));}
+
+function genDailyContent(mode){
+  const d=getDaily();
+  const now=new Date();
+  const today=now.getFullYear()+'-'+(now.getMonth()+1).toString().padStart(2,'0')+'-'+now.getDate().toString().padStart(2,'0');
+  if(d.date!==today){
+    d.date=today;d.content={};d.sessions=[];d.test={};
+  }
+  if(!d.content[mode]||d.content[mode].length===0){
+    // Generate 5 items from the pool, preferring weak items
+    const pool=getAgePoolForMode(mode);
+    const weak=getWeak()[mode]||[];
+    const weakChars=weak.filter(w=>w.wrongCount>=1).map(w=>w.char);
+    let selected=[];
+    // Include up to 2 weak items
+    if(weakChars.length>0){
+      const weakPick=shuffle(weakChars).slice(0,2);
+      selected.push(...weakPick);
+    }
+    // Fill rest from pool
+    const remaining=pool.filter(p=>!selected.includes(p));
+    const need=Math.max(0,MODE_ITEMS-selected.length);
+    const extra=shuffle(remaining).slice(0,need);
+    selected.push(...extra);
+    // If still not enough, just take from pool
+    if(selected.length<MODE_ITEMS){
+      selected.push(...shuffle(pool).slice(0,MODE_ITEMS-selected.length));
+    }
+    d.content[mode]=shuffle(selected).slice(0,MODE_ITEMS);
+    saveDaily(d);
+  }
+  return d.content[mode];
+}
+function getAgePoolForMode(mode){
+  const p=getPlayers()[GS.playerId];
+  const pool=POOLS[mode],tiers=pool.tiers;
+  const pri=pool.toTier(p.levels[mode]||1);
+  const items=[];
+  if(p&&p.age===3){
+    const maxTier=Math.min(pri,Math.min(1,tiers.length-1));
+    for(let t=0;t<=maxTier;t++)items.push(...tiers[t]);
+  }else{
+    items.push(...tiers[Math.min(pri,tiers.length-1)]);
+    if(pri>0)items.push(...tiers[pri-1]);
+  }
+  return [...new Set(items)];
+}
+function checkDailyLimit(mode){
+  const d=getDaily();
+  const now=new Date();const today=now.getFullYear()+'-'+(now.getMonth()+1).toString().padStart(2,'0')+'-'+now.getDate().toString().padStart(2,'0');
+  if(d.date!==today){d.date=today;d.content={};d.sessions=[];d.test={};saveDaily(d);}
+  const todaySessions=(d.sessions||[]).filter(s=>s.date===today);
+  if(todaySessions.length>=MAX_SESSIONS){
+    showRestrict('今天已经练习3次啦！','明天再来挑战吧，休息也很重要哦~');return false;
+  }
+  // Check if this mode is already done today (5 items completed)
+  const modeDone=todaySessions.filter(s=>s.mode===mode&&s.completed);
+  if(modeDone.length>=1){
+    showRestrict(MODE_LABELS[mode]+'今天已完成！','今天这个模式已经练习过了，去试试其他模式吧！');return false;
+  }
+  return true;
+}
+function showRestrict(title,text){
+  document.getElementById('rTitle').textContent=title;
+  document.getElementById('rText').textContent=text;
+  document.getElementById('restrictOverlay').classList.add('on');
+  speak(text);
+}
+function hideRestrict(){document.getElementById('restrictOverlay').classList.remove('on');}
+
+// Session timer
+let sessionTimer=null;let sessionSeconds=0;let modeSeconds=0;let currentSessionId=null;
+function startSessionTimer(){
+  sessionSeconds=0;modeSeconds=0;
+  if(sessionTimer)clearInterval(sessionTimer);
+  sessionTimer=setInterval(()=>{
+    sessionSeconds++;modeSeconds++;
+    const mm=Math.floor(sessionSeconds/60).toString().padStart(2,'0');
+    const ss=(sessionSeconds%60).toString().padStart(2,'0');
+    const el=document.getElementById('sessionTimer');
+    if(el)el.textContent=mm+':'+ss;
+    // Mode limit: 5 minutes
+    if(modeSeconds>=MODE_MINUTES*60){
+      showRestrict('⏰ 本模式时间到','这个模式已经玩了5分钟，去试试其他模式吧！');
+      goHome();
+    }
+    // Session limit: 20 minutes
+    if(sessionSeconds>=SESSION_MINUTES*60){
+      showRestrict('⏰ 本次时间到','已经玩了20分钟，休息一下吧！');
+      goHome();
+    }
+  },1000);
+  document.getElementById('sessionInfo').classList.remove('hidden');
+}
+function stopSessionTimer(){
+  if(sessionTimer){clearInterval(sessionTimer);sessionTimer=null;}
+  document.getElementById('sessionInfo').classList.add('hidden');
+}
+
+function recordHitCorrect(mode,item){
+  const d=getDaily();const now=new Date();const today=d.date;
+  let s=d.sessions.find(x=>x.id===currentSessionId);
+  if(!s){
+    currentSessionId=Date.now().toString();
+    s={id:currentSessionId,date:today,mode:mode,correct:0,wrong:0,items:[],startTime:now.getTime(),completed:false};
+    d.sessions.push(s);
+  }
+  s.correct++;s.items.push({item,result:'correct'});
+  saveDaily(d);
+  addPoints(1); // +1 point per correct hit
+}
+function recordHitWrong(mode,item){
+  const d=getDaily();const today=d.date;
+  let s=d.sessions.find(x=>x.id===currentSessionId);
+  if(!s){
+    currentSessionId=Date.now().toString();
+    s={id:currentSessionId,date:today,mode:mode,correct:0,wrong:0,items:[],startTime:Date.now(),completed:false};
+    d.sessions.push(s);
+  }
+  s.wrong++;s.items.push({item,result:'wrong'});
+  saveDaily(d);
+  // Weak tracking
+  const w=getWeak();const list=w[mode]||[];
+  const idx=list.findIndex(x=>x.char===item);
+  if(idx>=0){list[idx].wrongCount++;list[idx].lastDate=today;}
+  else{list.push({char:item,wrongCount:1,lastDate:today});}
+  w[mode]=list;saveWeak(w);
+}
+
+// ==================== TEST SYSTEM ====================
+let testState={mode:'',items:[],idx:0,results:[],startTime:0};
+function startDailyTest(mode){
+  const d=getDaily();const content=(d.content||{})[mode]||[];
+  if(content.length===0){speak('今天还没有学习内容，先去玩一局吧！');return;}
+  testState.mode=mode;testState.items=content;testState.idx=0;testState.results=[];testState.startTime=Date.now();
+  document.getElementById('parentScreen').classList.add('hidden');
+  document.getElementById('testScreen').classList.remove('hidden');
+  document.getElementById('testTitle').textContent=MODE_LABELS[mode]+'测试';
+  renderTestQuestion();
+}
+function renderTestQuestion(){
+  const t=testState;
+  document.getElementById('testProgress').textContent='第 '+(t.idx+1)+' / '+t.items.length+' 题';
+  const q=t.items[t.idx];
+  const isChinese=t.mode==='chinese';
+  document.getElementById('testQ').textContent=isChinese?'请找出「'+q+'」字':'请找出 '+q;
+  // Generate options: correct + 3 distractors from pool
+  const pool=getAgePoolForMode(t.mode).filter(x=>x!==q);
+  const dist=shuffle(pool).slice(0,3);
+  const opts=shuffle([q,...dist]);
+  const box=document.getElementById('testOpts');
+  box.innerHTML=opts.map(o=>`<button class="test-opt" onclick="answerTest('${o}')">${o}</button>`).join('');
+  document.getElementById('testResult').textContent='';
+  speak(isChinese?'请找出「'+q+'」':'Find '+q);
+}
+function answerTest(ans){
+  const t=testState;const correct=t.items[t.idx];
+  const opts=document.querySelectorAll('.test-opt');
+  opts.forEach(btn=>{
+    btn.disabled=true;
+    if(btn.textContent===correct)btn.classList.add('correct');
+    if(btn.textContent===ans&&ans!==correct)btn.classList.add('wrong');
+  });
+  const isCorrect=ans===correct;
+  t.results.push({item:correct,correct:isCorrect});
+  if(isCorrect){speak('答对了！');document.getElementById('testResult').textContent='✅ 正确！';}
+  else{speak('不对哦，这是「'+correct+'」');document.getElementById('testResult').textContent='❌ 这是「'+correct+'」';}
+  t.idx++;
+  setTimeout(()=>{
+    if(t.idx>=t.items.length){finishTest();}
+    else{renderTestQuestion();}
+  },1500);
+}
+function finishTest(){
+  const t=testState;const correctCount=t.results.filter(r=>r.correct).length;
+  const total=t.results.length;
+  const pct=Math.round(correctCount/total*100);
+  document.getElementById('testQ').textContent='';
+  document.getElementById('testOpts').innerHTML='';
+  document.getElementById('testProgress').textContent='';
+  document.getElementById('testResult').innerHTML='<div style="font-size:28px;margin-bottom:8px">'+pct+'%</div>答对 '+correctCount+' / '+total+' 题';
+  speak('测试完成！答对了'+correctCount+'题，正确率'+pct+'百分之！');
+  // Save test record
+  const tr=getTest();const d=getDaily();const date=d.date;
+  if(!tr[date])tr[date]={};
+  tr[date][t.mode]={total:total,correct:correctCount,results:t.results};
+  saveTest(tr);
+  setTimeout(()=>{
+    if(pct>=80){cele('太棒了！\n测试通过！',2500);addPoints(5);}
+    else if(pct>=60){cele('不错哦！\n继续加油！',2500);addPoints(3);}
+    else{cele('再练习一下\n会更好的！',2500);addPoints(1);}
+  },1000);
+}
+function endTest(){
+  document.getElementById('testScreen').classList.add('hidden');
+  document.getElementById('parentScreen').classList.remove('hidden');
+  switchParentTab('today');
+}
+
+// ==================== OVERRIDE: DAILY MODE INTEGRATION ====================
+// Override start() to support daily learning flow
+const _origStart=start;
+start=function(mode){
+  const id=getCurrentPlayer();
+  if(!id){showPlayerSelect();return;}
+  // Check daily limit
+  if(!checkDailyLimit(mode))return;
+  // Generate daily content if needed
+  genDailyContent(mode);
+  // Reset session timer for this mode
+  modeSeconds=0;
+  // Call original start
+  _origStart(mode);
+  // Start session timer
+  startSessionTimer();
+};
+// Override goHome to save session
+const _origGoHome2=goHome;
+goHome=function(){
+  stopSessionTimer();
+  // Mark session as completed if at least 1 item was practiced
+  const d=getDaily();const s=d.sessions.find(x=>x.id===currentSessionId);
+  if(s){s.completed=true;s.endTime=Date.now();saveDaily(d);}
+  currentSessionId=null;
+  _origGoHome2();
+};
+// Override Balloon.shoot to track hits
+const _origShoot=Balloon.prototype.shoot;
+Balloon.prototype.shoot=function(){
+  const cx=this.x,cy=this.y;
+  if(this.char===GS.currentTarget){
+    recordHitCorrect(GS.mode,this.char);
+  }else{
+    recordHitWrong(GS.mode,this.char);
+  }
+  _origShoot.call(this);
+};
+// Override launch to use daily content sequence
+const _origLaunch=launch;
+let dailyItemIdx=0;
+launch=function(){
+  if(GS.launchTimer){clearTimeout(GS.launchTimer);GS.launchTimer=null;}
+  GS.balloons=GS.balloons.filter(b=>b.alive);
+  GS.ripples=[];
+  GS.correctHit=false;GS.batchId++;
+  const bid=GS.batchId;
+  if(GS.missRespawnTimer){clearTimeout(GS.missRespawnTimer);GS.missRespawnTimer=null;}
+
+  // Get daily content for this mode
+  const dailyItems=genDailyContent(GS.mode);
+  if(dailyItems.length===0){_origLaunch();return;}
+  // Use next item in sequence
+  if(dailyItemIdx>=dailyItems.length)dailyItemIdx=0;
+  const correct=dailyItems[dailyItemIdx];
+  dailyItemIdx++;
+  // If completed all 5, mark mode done and end
+  if(dailyItemIdx>dailyItems.length){
+    // Show completion
+    cele('🎉 '+MODE_LABELS[GS.mode]+'完成！\n今天这5个都学会啦！',3000);
+    speak('太棒了！今天'+MODE_LABELS[GS.mode]+'的练习完成了！');
+    setTimeout(()=>goHome(),3000);
+    return;
+  }
+  GS.currentTarget=correct;
+  document.getElementById('promptTarget').textContent=correct;
+  if(GS.mode==='word'){speakWord('Find '+correct);}
+  else{const prefix=GS.mode==='number'?'数字':(GS.mode==='letter'?'字母':'');speak('找到'+prefix+correct);}
+  // Get distractors from pool (excluding correct)
+  const pool=getAgePoolForMode(GS.mode).filter(x=>x!==correct);
+  const n=Math.min(4+Math.floor(GS.level/3),pool.length);
+  const distractors=shuffle(pool).slice(0,n-1);
+  const chars=shuffle([correct,...distractors]);
+  chars.forEach((ch,i)=>{
+    setTimeout(()=>{
+      if(bid!==GS.batchId)return;
+      const b=new Balloon(ch,BALLOON_COLORS[i%BALLOON_COLORS.length],ch===correct);
+      GS.balloons.push(b);
+    },i*500);
+  });
+};
+
+// Update score display to show store points too
+function updateScoreCard(){
+  const p=getPlayers()[GS.playerId];if(!p)return;
+  document.getElementById('scScoreNum').textContent=p.scores[GS.mode]||0;
+  document.getElementById('scLevel').textContent='第'+(p.levels[GS.mode]||1)+'关';
+  // Also show total points in scoreCard
+  const s=getStore();const ptsEl=document.getElementById('scScoreNum');
+  // We keep the original score display but add total points below
+}
+
+</script>
+
+<!-- Store Screen -->
+<div id="storeScreen" class="hidden">
+  <div class="store-header">
+    <button class="store-back" onclick="goStoreBack()">←</button>
+    <div class="store-title">积分超市</div>
+    <div class="store-points"><span class="star-icon">⭐</span><span class="pts-val" id="storePts">0</span></div>
+  </div>
+  <div class="store-subtitle">用积分兑换奖励吧！</div>
+  <div class="store-grid" id="storeGrid">
+    <div class="store-item">
+      <div class="s-icon">📺</div>
+      <div class="s-name">看一集动画片</div>
+      <div class="s-cost">⭐ 15积分</div>
+      <button class="s-btn" onclick="buyItem('看一集动画片',15)">兑换</button>
+    </div>
+    <div class="store-item">
+      <div class="s-icon">🍦</div>
+      <div class="s-name">吃一个冰淇淋</div>
+      <div class="s-cost">⭐ 20积分</div>
+      <button class="s-btn" onclick="buyItem('吃一个冰淇淋',20)">兑换</button>
+    </div>
+    <div class="store-item">
+      <div class="s-icon">🌳</div>
+      <div class="s-name">去公园玩</div>
+      <div class="s-cost">⭐ 30积分</div>
+      <button class="s-btn" onclick="buyItem('去公园玩',30)">兑换</button>
+    </div>
+    <div class="store-item">
+      <div class="s-icon">📚</div>
+      <div class="s-name">选一本新绘本</div>
+      <div class="s-cost">⭐ 40积分</div>
+      <button class="s-btn" onclick="buyItem('选一本新绘本',40)">兑换</button>
+    </div>
+    <div class="store-item">
+      <div class="s-icon">🧸</div>
+      <div class="s-name">买一个小玩具</div>
+      <div class="s-cost">⭐ 60积分</div>
+      <button class="s-btn" onclick="buyItem('买一个小玩具',60)">兑换</button>
+    </div>
+  </div>
+  <div class="store-record-title">兑换记录</div>
+  <div class="store-record-list" id="storeRecordList"></div>
+</div>
+
+<!-- Parent Screen -->
+<div id="parentScreen" class="hidden">
+  <div class="store-header">
+    <button class="store-back" onclick="goParentBack()">←</button>
+    <div class="store-title">家长模式</div>
+    <div style="width:44px"></div>
+  </div>
+
+  <!-- Password Gate -->
+  <div id="pwdGate" style="display:flex;flex-direction:column;align-items:center;width:100%;max-width:400px;margin-top:20px">
+    <div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:8px">请输入家长密码</div>
+    <div class="pwd-box">
+      <input class="pwd-digit" type="password" maxlength="1" id="pd1" oninput="pwdInput(1)">
+      <input class="pwd-digit" type="password" maxlength="1" id="pd2" oninput="pwdInput(2)">
+      <input class="pwd-digit" type="password" maxlength="1" id="pd3" oninput="pwdInput(3)">
+      <input class="pwd-digit" type="password" maxlength="1" id="pd4" oninput="pwdInput(4)">
+    </div>
+    <div class="pwd-error" id="pwdError"></div>
+    <button class="pwd-btn" onclick="checkPwd()">进入</button>
+    <div class="pwd-hint" id="pwdHint">首次进入请设置4位密码</div>
+  </div>
+
+  <!-- Parent Dashboard -->
+  <div id="parentDash" class="hidden" style="width:100%;max-width:420px;display:flex;flex-direction:column;align-items:center">
+    <div class="parent-tabs">
+      <div class="parent-tab active" onclick="switchParentTab('today')" id="tabToday">今日学习</div>
+      <div class="parent-tab" onclick="switchParentTab('week')" id="tabWeek">本周趋势</div>
+      <div class="parent-tab" onclick="switchParentTab('weak')" id="tabWeak">弱项巩固</div>
+    </div>
+
+    <div class="parent-content" id="parentContent">
+      <!-- Today tab -->
+      <div id="pToday">
+        <div class="parent-card">
+          <div class="pc-title">今日学习概况</div>
+          <div class="pc-row"><span>今日日期</span><span class="pc-val" id="ptDate">--</span></div>
+          <div class="pc-row"><span>已完成练习</span><span class="pc-val" id="ptDone">0/3 次</span></div>
+          <div class="pc-row"><span>今日总得分</span><span class="pc-val" id="ptScore">0</span></div>
+          <div class="pc-row"><span>测试正确率</span><span class="pc-val" id="ptRate">--</span></div>
+        </div>
+        <div class="parent-card">
+          <div class="pc-title">今日学习内容</div>
+          <div id="ptContent" style="font-size:13px;color:#ccc;line-height:1.8"></div>
+        </div>
+        <div class="parent-card">
+          <div class="pc-title">今日测试</div>
+          <div id="ptTestArea">
+            <div style="font-size:13px;color:#8e8ea0;margin-bottom:8px">点击下方按钮进行今日测试</div>
+            <button class="pwd-btn" onclick="startDailyTest('chinese')" style="margin:4px">汉字测试</button>
+            <button class="pwd-btn" onclick="startDailyTest('number')" style="margin:4px">数字测试</button>
+            <button class="pwd-btn" onclick="startDailyTest('letter')" style="margin:4px">字母测试</button>
+            <button class="pwd-btn" onclick="startDailyTest('word')" style="margin:4px">单词测试</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Week tab -->
+      <div id="pWeek" class="hidden">
+        <div class="parent-card">
+          <div class="pc-title">近7天正确率趋势</div>
+          <div class="weekly-chart" id="weekChart"></div>
+        </div>
+        <div class="parent-card">
+          <div class="pc-title">本周数据汇总</div>
+          <div class="pc-row"><span>总练习次数</span><span class="pc-val" id="pwTotal">0</span></div>
+          <div class="pc-row"><span>总正确数</span><span class="pc-val" id="pwCorrect">0</span></div>
+          <div class="pc-row"><span>总错误数</span><span class="pc-val" id="pwWrong">0</span></div>
+          <div class="pc-row"><span>平均正确率</span><span class="pc-val" id="pwAvg">--</span></div>
+        </div>
+      </div>
+
+      <!-- Weak tab -->
+      <div id="pWeak" class="hidden">
+        <div class="parent-card">
+          <div class="pc-title">需要巩固的内容</div>
+          <div id="weakList" style="font-size:13px;color:#ccc;line-height:1.8"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Test Screen -->
+<div id="testScreen" class="hidden">
+  <div class="store-header">
+    <button class="store-back" onclick="endTest()">←</button>
+    <div class="store-title" id="testTitle">今日测试</div>
+    <div style="width:44px"></div>
+  </div>
+  <div class="test-progress" id="testProgress">第 1 / 5 题</div>
+  <div class="test-q" id="testQ">请找出正确的字</div>
+  <div class="test-options" id="testOpts"></div>
+  <div class="test-result" id="testResult"></div>
+</div>
+
+<!-- Restrict Overlay -->
+<div id="restrictOverlay">
+  <div class="restrict-box">
+    <div class="r-title" id="rTitle">⏰ 时间到啦</div>
+    <div class="r-text" id="rText">今天已经玩够啦，休息一下明天再来吧！</div>
+    <button class="r-btn" onclick="hideRestrict()">知道了</button>
+  </div>
+</div>
+
+<!-- Session Info (top-right in game) -->
+<div id="sessionInfo" class="hidden">
+  <span class="si-dot"></span><span id="sessionTimer">00:00</span>
+</div>
+
+</body>
+</html>

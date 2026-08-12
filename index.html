@@ -1607,7 +1607,7 @@ function answerTest(ans){
   const isCorrect=ans===correct;
   t.results.push({item:correct,correct:isCorrect});
   if(isCorrect){speak('答对了！');document.getElementById('testResult').textContent='✅ 正确！';}
-  else{speak('不对哦，这是「'+correct+'」');document.getElementById('testResult').textContent='❌ 这是「'+correct+'」';}
+  else{speak('这是「'+correct+'」，我们再记一次');document.getElementById('testResult').textContent='这是「'+correct+'」，我们再记一次';}
   t.idx++;
   setTimeout(()=>{
     if(t.idx>=t.items.length){finishTest();}

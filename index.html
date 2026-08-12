@@ -1156,11 +1156,7 @@ Balloon.prototype.shoot=function(){
       const t2=GS.balloons.find(b=>b.isTarget&&b.alive&&!b.popping);
       if(t2)spawnParticles(t2.x,t2.y,'#ffb347',10);
     }
-    // Streak broken: gentle visual nudge (does NOT occupy the speech queue)
-    if(GS.streak>=2){
-      const need=(GS.playerId==='caocao')?5:10;
-      canvasText('连对'+GS.streak+'个！再对'+(need-GS.streak)+'个拿大礼包~',cx,cy-46,'#ffb347',15);
-    }
+    // Streak broken — no text feedback on miss (parent request: only sound + visual + voice)
     GS.streak=0;
     // Only audio + visual feedback on miss; NO text toast/canvas text (parent request)
     const enc=['没关系，再试试！','小手枪加油！','你可以的！','瞄准亮闪闪的！','别急，慢慢来~'];
@@ -1654,8 +1650,9 @@ start=function(mode){
   if(!checkDailyLimit(mode))return;
   // Generate daily content if needed
   genDailyContent(mode);
-  // Reset session timer for this mode
+  // Reset session timer and daily item index for this mode
   modeSeconds=0;
+  dailyItemIdx=0;
   // Call original start
   _origStart(mode);
   // Start session timer
@@ -1696,18 +1693,16 @@ launch=function(){
   // Get daily content for this mode
   const dailyItems=genDailyContent(GS.mode);
   if(dailyItems.length===0){_origLaunch();return;}
-  // Use next item in sequence
-  if(dailyItemIdx>=dailyItems.length)dailyItemIdx=0;
-  const correct=dailyItems[dailyItemIdx];
-  dailyItemIdx++;
-  // If completed all 5, mark mode done and end
-  if(dailyItemIdx>dailyItems.length){
+  // Check if all 5 items already completed BEFORE launching next
+  if(dailyItemIdx>=dailyItems.length){
     // Show completion
     cele('🎉 '+MODE_LABELS[GS.mode]+'完成！\n今天这5个都学会啦！',3000);
     speak('太棒了！今天'+MODE_LABELS[GS.mode]+'的练习完成了！');
     setTimeout(()=>goHome(),3000);
     return;
   }
+  const correct=dailyItems[dailyItemIdx];
+  dailyItemIdx++;
   GS.currentTarget=correct;
   document.getElementById('promptTarget').textContent=correct;
   if(GS.mode==='word'){speakWord('Find '+correct);}

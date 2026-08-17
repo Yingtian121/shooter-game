@@ -412,6 +412,17 @@ body{
 </div>
 
 <script>
+// ==== 测试模式：链接加 ?test=1 即不受每日次数/时长限制，且不写入学习记录 ====
+var TEST_MODE=new URLSearchParams(location.search).get('test')==='1';
+if(TEST_MODE){
+  document.title='咻咻小神枪手【测试模式】';
+  window.addEventListener('DOMContentLoaded',function(){
+    var b=document.createElement('div');
+    b.textContent='🧪 测试模式·不限次数';
+    b.style.cssText='position:fixed;top:6px;right:6px;z-index:999;background:rgba(78,205,196,.9);color:#08302c;font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;pointer-events:none;font-family:sans-serif';
+    document.body.appendChild(b);
+  });
+}
 // ==================== AUDIO ====================
 const AC=window.AudioContext||window.webkitAudioContext;let actx=null;
 function aInit(){if(!actx){actx=new AC();if(actx.state==='suspended')actx.resume();}}
@@ -1489,6 +1500,7 @@ function getAgePoolForMode(mode){
   return [...new Set(items)];
 }
 function checkDailyLimit(mode){
+  if(TEST_MODE)return true;
   const d=getDaily();
   const now=new Date();const today=now.getFullYear()+'-'+(now.getMonth()+1).toString().padStart(2,'0')+'-'+now.getDate().toString().padStart(2,'0');
   if(d.date!==today){d.date=today;d.content={};d.sessions=[];d.test={};saveDaily(d);}
@@ -1523,12 +1535,12 @@ function startSessionTimer(){
     const el=document.getElementById('sessionTimer');
     if(el)el.textContent=mm+':'+ss;
     // Mode limit: 5 minutes
-    if(modeSeconds>=MODE_MINUTES*60){
+    if(!TEST_MODE&&modeSeconds>=MODE_MINUTES*60){
       showRestrict('⏰ 本模式时间到','这个模式已经玩了5分钟，去试试其他模式吧！');
       goHome();
     }
     // Session limit: 20 minutes
-    if(sessionSeconds>=SESSION_MINUTES*60){
+    if(!TEST_MODE&&sessionSeconds>=SESSION_MINUTES*60){
       showRestrict('⏰ 本次时间到','已经玩了20分钟，休息一下吧！');
       goHome();
     }
@@ -1541,6 +1553,7 @@ function stopSessionTimer(){
 }
 
 function recordHitCorrect(mode,item){
+  if(TEST_MODE)return;
   const d=getDaily();const now=new Date();const today=d.date;
   let s=d.sessions.find(x=>x.id===currentSessionId);
   if(!s){
@@ -1553,6 +1566,7 @@ function recordHitCorrect(mode,item){
   addPoints(1); // +1 point per correct hit
 }
 function recordHitWrong(mode,item){
+  if(TEST_MODE)return;
   const d=getDaily();const today=d.date;
   let s=d.sessions.find(x=>x.id===currentSessionId);
   if(!s){
@@ -1694,6 +1708,7 @@ launch=function(){
   const dailyItems=genDailyContent(GS.mode);
   if(dailyItems.length===0){_origLaunch();return;}
   // Check if all 5 items already completed BEFORE launching next
+  if(TEST_MODE&&dailyItemIdx>=dailyItems.length)dailyItemIdx=0;
   if(dailyItemIdx>=dailyItems.length){
     // Show completion
     cele('🎉 '+MODE_LABELS[GS.mode]+'完成！\n今天这5个都学会啦！',3000);
